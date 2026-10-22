@@ -1,173 +1,285 @@
 // Lược đồ CSDL BrewLite (PostgreSQL). Chạy `npm run db:push` để tạo bảng, `npm run seed` để nạp dữ liệu mẫu.
+
+// Khai báo Prisma Client để ứng dụng JavaScript/TypeScript thao tác với CSDL.
 generator client {
   provider = "prisma-client-js"
 }
 
+// Khai báo loại CSDL PostgreSQL và lấy đường dẫn kết nối từ biến môi trường DATABASE_URL.
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// Danh sách các trạng thái mà đơn hàng có thể có.
 enum OrderStatus {
-  PENDING
-  PAID
-  PREPARING
-  READY
-  COMPLETED
-  CANCELLED
-  PAYMENT_FAILED
+  PENDING        // Đơn hàng đang chờ thanh toán.
+  PAID           // Đơn hàng đã thanh toán thành công.
+  PREPARING      // Cửa hàng đang chuẩn bị đơn hàng.
+  READY          // Đơn hàng đã sẵn sàng để khách nhận hoặc giao.
+  COMPLETED      // Đơn hàng đã hoàn thành.
+  CANCELLED      // Đơn hàng đã bị hủy.
+  PAYMENT_FAILED // Đơn hàng có thanh toán thất bại.
 }
 
+// Danh sách các phương thức thanh toán được hỗ trợ.
 enum PaymentMethod {
-  MOMO
-  ZALOPAY
-  SHOPEEPAY
-  VNPAY
-  VIETQR
-  CARD
-  POINTS
+  MOMO       // Thanh toán qua ví MoMo.
+  ZALOPAY    // Thanh toán qua ví ZaloPay.
+  SHOPEEPAY  // Thanh toán qua ví ShopeePay.
+  VNPAY      // Thanh toán qua VNPay.
+  VIETQR     // Thanh toán bằng mã QR ngân hàng.
+  CARD       // Thanh toán bằng thẻ.
+  POINTS     // Thanh toán bằng điểm tích lũy.
 }
 
+// Danh sách trạng thái của giao dịch thanh toán.
 enum PaymentStatus {
-  PROCESSING
-  SUCCEEDED
-  FAILED
+  PROCESSING // Giao dịch đang được xử lý.
+  SUCCEEDED  // Giao dịch thanh toán thành công.
+  FAILED     // Giao dịch thanh toán thất bại.
 }
 
+// Danh sách kích cỡ sản phẩm.
 enum Size {
-  S
-  M
-  L
+  S // Kích cỡ nhỏ.
+  M // Kích cỡ vừa.
+  L // Kích cỡ lớn.
 }
 
+// Danh sách hình thức nhận hàng.
 enum Fulfillment {
-  PICKUP
-  DELIVERY
+  PICKUP   // Khách đến cửa hàng lấy hàng.
+  DELIVERY // Cửa hàng giao hàng cho khách.
 }
 
+// Danh sách loại voucher.
 enum VoucherType {
-  PERCENT
-  FREESHIP
+  PERCENT  // Voucher giảm giá theo phần trăm.
+  FREESHIP // Voucher miễn phí giao hàng.
 }
 
+// Model User đại diện cho người dùng trong hệ thống.
 model User {
+  // Mã định danh duy nhất của người dùng, tự động tạo UUID nếu không truyền vào.
   id            String               @id @default(uuid())
+  // Email của người dùng, không cho phép hai tài khoản trùng email.
   email         String               @unique
+  // Họ và tên đầy đủ của người dùng.
   fullName      String
+  // Mật khẩu đã được băm, không lưu mật khẩu dạng văn bản thuần.
   passwordHash  String
+  // Số điểm tích lũy hiện có, mặc định bằng 0.
   loyaltyPoints Int                  @default(0)
+  // Thời điểm tạo tài khoản, mặc định là thời điểm hiện tại.
   createdAt     DateTime             @default(now())
+  // Danh sách đơn hàng của người dùng, quan hệ một User có nhiều Order.
   orders        Order[]
+  // Danh sách lịch sử cộng/trừ điểm của người dùng.
   loyaltyLogs   LoyaltyTransaction[]
 }
 
+// Model Product đại diện cho sản phẩm được bán trong cửa hàng.
 model Product {
+  // Mã sản phẩm dùng làm khóa chính, ví dụ "bac-xiu".
   id          String      @id // slug, ví dụ "bac-xiu"
+  // Tên sản phẩm.
   name        String
+  // Mô tả chi tiết sản phẩm.
   description String
+  // Giá cơ bản của sản phẩm ở size S, tính bằng đồng Việt Nam.
   price       Int // giá size S, đơn vị đồng
+  // Đường dẫn hình ảnh sản phẩm.
   imageUrl    String
+  // Số lượng sản phẩm còn trong kho, tính theo ly hoặc bánh.
   stock       Int // số ly/bánh còn bán được
+  // Phiên bản bản ghi kho, phục vụ optimistic locking; tăng khi trừ hoặc hoàn kho.
   version     Int         @default(0) // optimistic locking: tăng 1 mỗi lần trừ/hoàn kho
+  // Danh mục sản phẩm, ví dụ cà phê, trà hoặc bánh.
   category    String
+  // Loại sản phẩm: "drink" là đồ uống, "food" là đồ ăn.
   kind        String // "drink" | "food"
+  // Nhãn sản phẩm như "hot" hoặc "new"; dấu ? cho phép giá trị null.
   tag         String? // "hot" | "new"
+  // Điểm đánh giá sản phẩm, mặc định là 5.
   rating      Float       @default(5)
+  // Tổng số lượng sản phẩm đã bán, mặc định bằng 0.
   sold        Int         @default(0)
+  // Cho biết sản phẩm có hỗ trợ tùy chọn đá hay không, mặc định là true.
   hasIce      Boolean     @default(true)
+  // Màu đại diện của sản phẩm, mặc định là mã màu nâu.
   color       String      @default("#6f4e37")
+  // Danh sách từ khóa liên quan đến sản phẩm, lưu dưới dạng mảng chuỗi.
   keywords    String[]
+  // Danh sách topping có quan hệ nhiều-nhiều với sản phẩm.
   toppings    Topping[]
+  // Danh sách các dòng chi tiết đơn hàng có chứa sản phẩm này.
   orderItems  OrderItem[]
 }
 
+// Model Topping đại diện cho phần thêm vào đồ uống hoặc món ăn.
 model Topping {
+  // Mã topping, dùng làm khóa chính.
   id       String    @id
+  // Tên topping.
   name     String
+  // Giá tiền của topping, tính bằng đồng.
   price    Int
+  // Danh sách sản phẩm có thể kết hợp với topping này.
   products Product[]
 }
 
+// Model Order đại diện cho đơn hàng của người dùng.
 model Order {
+  // Mã đơn hàng dễ đọc, ví dụ "BL482913", dùng làm khóa chính.
   id            String        @id // mã đơn dễ đọc, ví dụ "BL482913"
+  // Mã người dùng tạo đơn, đóng vai trò khóa ngoại tham chiếu User.id.
   userId        String
+  // Khai báo quan hệ giữa đơn hàng và người dùng thông qua userId.
   user          User          @relation(fields: [userId], references: [id])
+  // Trạng thái đơn hàng, mặc định là PENDING.
   status        OrderStatus   @default(PENDING)
+  // Tổng tiền hàng trước khi cộng phí và trừ giảm giá.
   subtotal      Int
+  // Phí phát sinh của đơn hàng, ví dụ phí giao hàng.
   fee           Int
+  // Tổng số tiền được giảm từ voucher hoặc ưu đãi.
   discount      Int
+  // Tổng tiền cuối cùng cần thanh toán, thường bằng subtotal + fee - discount.
   total         Int
+  // Mã voucher được sử dụng; có thể null nếu không áp dụng voucher.
   voucherCode   String?
+  // Phương thức thanh toán của đơn hàng.
   paymentMethod PaymentMethod
+  // Hình thức nhận hàng: nhận tại cửa hàng hoặc giao hàng.
   fulfillment   Fulfillment
+  // Mã cửa hàng xử lý đơn hàng; hiện chưa khai báo quan hệ khóa ngoại.
   storeId       String
+  // Thời gian nhận hàng dự kiến, được lưu dưới dạng chuỗi.
   pickupTime    String
+  // Địa chỉ giao hàng, mặc định là chuỗi rỗng.
   address       String        @default("")
+  // Mã xác nhận để khách nhận đơn hàng.
   pickupCode    String
+  // Số điểm tích lũy nhận được từ đơn hàng, mặc định bằng 0.
   pointsEarned  Int           @default(0)
+  // Số điểm tích lũy đã sử dụng cho đơn hàng, mặc định bằng 0.
   pointsUsed    Int           @default(0)
+  // Thời điểm tạo đơn hàng, mặc định là thời điểm hiện tại.
   createdAt     DateTime      @default(now())
+  // Thời điểm cập nhật đơn hàng gần nhất, Prisma tự cập nhật khi sửa bản ghi.
   updatedAt     DateTime      @updatedAt
+  // Danh sách các dòng sản phẩm thuộc đơn hàng.
   items         OrderItem[]
+  // Danh sách giao dịch thanh toán liên quan đến đơn hàng.
   payments      Payment[]
 
+  // Tạo chỉ mục kết hợp userId và createdAt để hỗ trợ tìm đơn theo người dùng và thời gian.
   @@index([userId, createdAt])
 }
 
+// Model OrderItem đại diện cho một dòng sản phẩm trong đơn hàng.
 model OrderItem {
+  // Mã chi tiết đơn hàng, tự động tạo UUID.
   id          String   @id @default(uuid())
+  // Mã đơn hàng mà dòng sản phẩm này thuộc về.
   orderId     String
+  // Quan hệ với Order; khi xóa đơn hàng, chi tiết đơn hàng tương ứng cũng bị xóa.
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Mã sản phẩm được mua.
   productId   String
+  // Quan hệ với sản phẩm trong bảng Product thông qua productId.
   product     Product  @relation(fields: [productId], references: [id])
+  // Tên sản phẩm tại thời điểm đặt hàng, giúp lưu lại thông tin tên đã mua.
   productName String
+  // Kích cỡ sản phẩm S, M hoặc L; có thể null nếu không áp dụng.
   size        Size?
+  // Mức đường khách chọn; có thể null nếu không áp dụng.
   sugar       Int?
+  // Mức đá khách chọn; có thể null nếu không áp dụng.
   ice         Int?
+  // Danh sách mã topping được chọn, lưu dưới dạng mảng chuỗi.
   toppingIds  String[]
+  // Ghi chú riêng cho sản phẩm, mặc định là chuỗi rỗng.
   note        String   @default("")
+  // Số lượng sản phẩm trong dòng chi tiết đơn hàng.
   qty         Int
+  // Đơn giá của một sản phẩm theo cách tính giá của ứng dụng.
   unitPrice   Int
+  // Thành tiền của dòng sản phẩm, thường bằng qty nhân unitPrice.
   lineTotal   Int
 }
 
+// Model Payment đại diện cho giao dịch thanh toán của đơn hàng.
 model Payment {
+  // Mã giao dịch thanh toán, tự động tạo UUID.
   id             String        @id @default(uuid())
+  // Mã đơn hàng mà giao dịch thanh toán thuộc về.
   orderId        String
+  // Quan hệ với đơn hàng; xóa đơn hàng sẽ xóa các giao dịch liên quan.
   order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Khóa chống xử lý giao dịch trùng lặp; mỗi khóa chỉ được sử dụng một lần.
   idempotencyKey String        @unique // khoá chống trùng: gửi lại cùng khoá không trừ tiền lần 2
+  // Số tiền của giao dịch thanh toán.
   amount         Int
+  // Phương thức thanh toán được sử dụng.
   method         PaymentMethod
+  // Trạng thái giao dịch, mặc định là PROCESSING.
   status         PaymentStatus @default(PROCESSING)
+  // Lý do giao dịch thất bại; có thể null.
   failureReason  String?
+  // Thời điểm tạo giao dịch.
   createdAt      DateTime      @default(now())
+  // Thời điểm cập nhật giao dịch gần nhất.
   updatedAt      DateTime      @updatedAt
 
+  // Tạo chỉ mục trên orderId để tìm các giao dịch của một đơn hàng nhanh hơn.
   @@index([orderId])
 }
 
+// Model Voucher đại diện cho mã giảm giá hoặc ưu đãi.
 model Voucher {
+  // Mã voucher, dùng làm khóa chính.
   code             String         @id
+  // Loại voucher: giảm theo phần trăm hoặc miễn phí giao hàng.
   type             VoucherType
+  // Tên hoặc nội dung hiển thị của voucher.
   label            String
+  // Phần trăm giảm giá, mặc định bằng 0.
   percent          Int            @default(0)
+  // Số tiền giảm tối đa, mặc định bằng 0.
   maxDiscount      Int            @default(0)
+  // Giá trị đơn hàng tối thiểu để áp dụng voucher, mặc định bằng 0.
   minOrder         Int            @default(0)
+  // Phương thức thanh toán bắt buộc nếu voucher có điều kiện; có thể null.
   requiredMethod   PaymentMethod?
+  // Cho biết voucher có bắt buộc đơn hàng sử dụng giao hàng hay không.
   requiresDelivery Boolean        @default(false)
+  // Giới hạn lượt sử dụng voucher; null có thể được dùng để biểu thị không giới hạn.
   usageLimit       Int?
+  // Số lượt voucher đã sử dụng, mặc định bằng 0.
   usedCount        Int            @default(0)
+  // Trạng thái hoạt động của voucher, mặc định là true.
   active           Boolean        @default(true)
 }
 
+// Model LoyaltyTransaction lưu lịch sử cộng hoặc trừ điểm tích lũy.
 model LoyaltyTransaction {
+  // Mã giao dịch điểm tích lũy, tự động tạo UUID.
   id        String   @id @default(uuid())
+  // Mã người dùng có điểm được thay đổi.
   userId    String
+  // Quan hệ với người dùng thông qua userId.
   user      User     @relation(fields: [userId], references: [id])
+  // Mã đơn hàng liên quan đến giao dịch điểm; có thể null.
   orderId   String?
+  // Số điểm thay đổi: số dương là cộng điểm, số âm là trừ điểm.
   delta     Int
+  // Lý do cộng hoặc trừ điểm, ví dụ mua hàng hoặc đổi điểm.
   reason    String
+  // Thời điểm ghi nhận giao dịch điểm.
   createdAt DateTime @default(now())
 
+  // Tạo chỉ mục kết hợp userId và createdAt để truy vấn lịch sử điểm theo thời gian.
   @@index([userId, createdAt])
 }
