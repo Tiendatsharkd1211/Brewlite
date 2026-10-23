@@ -1,0 +1,196 @@
+// Lược đồ CSDL BrewLite (PostgreSQL). Chạy `npm run db:push` để tạo bảng, `npm run seed` để nạp dữ liệu mẫu.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+  PAYMENT_FAILED
+}
+
+/// VNPAY: trả qua cổng VNPay (môi trường thử sandbox). POINTS: trừ điểm BrewLite.
+enum PaymentMethod {
+  VNPAY
+  POINTS
+}
+
+enum PaymentStatus {
+  PROCESSING // đã tạo link VNPay, đang chờ khách thanh toán
+  SUCCEEDED // VNPay báo thành công, đơn đã PAID
+  FAILED // VNPay báo lỗi / khách huỷ / link không dùng nữa: không bị trừ tiền
+  NEEDS_REFUND // VNPay đã trừ tiền nhưng đơn đã được trả bằng giao dịch khác hoặc đã huỷ: cần hoàn tiền
+}
+
+enum Size {
+  S
+  M
+  L
+}
+
+enum Fulfillment {
+  PICKUP
+  DELIVERY
+}
+
+enum VoucherType {
+  PERCENT
+  FREESHIP
+}
+
+model User {
+  id            String               @id @default(uuid())
+  email         String               @unique
+  fullName      String
+  passwordHash  String
+  loyaltyPoints Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  orders        Order[]
+  loyaltyLogs   LoyaltyTransaction[]
+}
+
+model Product {
+  id          String      @id // slug, ví dụ "bac-xiu"
+  name        String
+  description String
+  price       Int // giá size S, đơn vị đồng
+  imageUrl    String
+  stock       Int // số ly/bánh còn bán được
+  version     Int         @default(0) // optimistic locking: tăng 1 mỗi lần trừ/hoàn kho
+  category    String
+  kind        String // "drink" | "food"
+  tag         String? // "hot" | "new"
+  rating      Float       @default(5)
+  sold        Int         @default(0)
+  hasIce      Boolean     @default(true)
+  color       String      @default("#6f4e37")
+  keywords    String[]
+  toppings    Topping[]
+  orderItems  OrderItem[]
+}
+
+model Topping {
+  id       String    @id
+  name     String
+  price    Int
+  products Product[]
+}
+
+model Order {
+  id            String        @id // mã đơn dễ đọc, ví dụ "BL482913"
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  status        OrderStatus   @default(PENDING)
+  subtotal      Int
+  fee           Int
+  discount      Int
+  total         Int
+  voucherCode   String?
+  paymentMethod PaymentMethod
+  fulfillment   Fulfillment
+  pickupTime    String
+  address       String        @default("")
+  pointsEarned  Int           @default(0)
+  pointsUsed    Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         OrderItem[]
+  payments      Payment[]
+
+  @@index([userId, createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  productName String
+  size        Size?
+  sugar       Int?
+  ice         Int?
+  toppingIds  String[]
+  note        String   @default("")
+  qty         Int
+  unitPrice   Int
+  lineTotal   Int
+}
+
+/// Một lần thanh toán (một lần bấm "Thanh toán"). Một đơn có thể có nhiều lần: lần trước lỗi thì tạo lần mới.
+model Payment {
+  id                   String        @id @default(uuid())
+  orderId              String
+  order                Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  idempotencyKey       String        @unique // khoá chống trùng: gửi lại cùng khoá không tạo giao dịch thứ 2
+  amount               Int // số tiền, đơn vị đồng
+  method               PaymentMethod
+  status               PaymentStatus @default(PROCESSING)
+  failureReason        String?
+  // ----- Thông tin VNPay (null khi trả bằng điểm) -----
+  txnRef               String?       @unique // vnp_TxnRef: mã giao dịch BrewLite gửi sang VNPay
+  payUrl               String? // link sang cổng VNPay, dùng lại được tới khi hết hạn
+  vnpCreateDate        String? // vnp_CreateDate (yyyyMMddHHmmss, giờ Việt Nam), cần cho truy vấn đối soát
+  expiresAt            DateTime? // vnp_ExpireDate: quá giờ này VNPay không nhận thanh toán
+  vnpTransactionNo     String? // mã giao dịch tại VNPay
+  vnpBankCode          String? // ngân hàng, ví dụ NCB
+  vnpBankTranNo        String? // mã giao dịch tại ngân hàng
+  vnpCardType          String? // ATM / QRCODE / ...
+  vnpPayDate           String? // thời điểm khách trả tiền (yyyyMMddHHmmss, giờ Việt Nam)
+  vnpResponseCode      String? // 00 = thành công, 24 = khách huỷ, 51 = không đủ số dư, ...
+  vnpTransactionStatus String?
+  paidAt               DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  logs                 PaymentLog[]
+
+  @@index([orderId])
+}
+
+/// Nhật ký từng lần trao đổi với VNPay của một giao dịch: tạo link, VNPay chuyển khách về, IPN, truy vấn đối soát
+model PaymentLog {
+  id        String   @id @default(uuid())
+  paymentId String
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  source    String // CREATE | RETURN | IPN | QUERY
+  message   String // tóm tắt dễ đọc
+  data      Json? // tham số VNPay gửi/nhận (đã bỏ chữ ký)
+  createdAt DateTime @default(now())
+
+  @@index([paymentId, createdAt])
+}
+
+model Voucher {
+  code             String         @id
+  type             VoucherType
+  label            String
+  percent          Int            @default(0)
+  maxDiscount      Int            @default(0)
+  minOrder         Int            @default(0)
+  requiredMethod   PaymentMethod?
+  requiresDelivery Boolean        @default(false)
+  usageLimit       Int?
+  usedCount        Int            @default(0)
+  active           Boolean        @default(true)
+}
+
+model LoyaltyTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String?
+  delta     Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
