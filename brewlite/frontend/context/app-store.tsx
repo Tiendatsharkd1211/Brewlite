@@ -1,12 +1,11 @@
 'use client';
 
 // GIỎ HÀNG (Task 5) quản lý bằng Zustand, lưu localStorage để tải lại trang không mất.
-// Kèm vài tuỳ chọn cá nhân: chi nhánh đang chọn, món yêu thích, ví đã liên kết.
+// Kèm món yêu thích của khách.
 import { useEffect, type ReactNode } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { STORES } from '@/lib/mock-data';
-import type { CartItem, NewCartItem, PaymentMethodId } from '@/lib/types';
+import type { CartItem, NewCartItem } from '@/lib/types';
 
 export const MAX_QTY = 20;
 
@@ -68,23 +67,15 @@ export const useCartStore = create<CartState>()(
 );
 
 interface PrefsState {
-  storeId: string;
   favorites: string[];
-  linkedWallets: PaymentMethodId[];
-  setStoreId: (id: string) => void;
   toggleFavorite: (productId: string) => void;
-  toggleWallet: (id: PaymentMethodId) => void;
 }
 
 export const usePrefsStore = create<PrefsState>()(
   persist(
     (set) => ({
-      storeId: STORES[0].id,
       favorites: [],
-      linkedWallets: ['MOMO'],
-      setStoreId: (storeId) => set({ storeId }),
       toggleFavorite: (id) => set((s) => ({ favorites: s.favorites.includes(id) ? s.favorites.filter((f) => f !== id) : [...s.favorites, id] })),
-      toggleWallet: (id) => set((s) => ({ linkedWallets: s.linkedWallets.includes(id) ? s.linkedWallets.filter((w) => w !== id) : [...s.linkedWallets, id] })),
     }),
     { name: 'brewlite.prefs', storage: createJSONStorage(() => localStorage), skipHydration: true },
   ),
@@ -116,11 +107,7 @@ export function useAppStore() {
     setQuantity: cart.setQuantity,
     removeFromCart: cart.remove,
     clearCart: cart.clear,
-    storeId: prefs.storeId,
     favorites: prefs.favorites,
-    linkedWallets: prefs.linkedWallets,
-    setStoreId: prefs.setStoreId,
     toggleFavorite: prefs.toggleFavorite,
-    toggleWallet: prefs.toggleWallet,
   };
 }

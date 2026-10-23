@@ -8,6 +8,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { WalletsModule } from './wallets/wallets.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PromotionsModule } from './promotions/promotions.module';
     ProductsModule,
     PromotionsModule,
     OrdersModule,
+    WalletsModule,
     PaymentsModule,
   ],
   controllers: [AppController],

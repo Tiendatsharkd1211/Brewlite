@@ -1,22 +1,20 @@
 'use client';
 
-// MÀN HÌNH THEO DÕI ĐƠN: trạng thái theo máy trạng thái của backend, mã lấy món + QR, thông tin quán.
+// MÀN HÌNH THEO DÕI ĐƠN: trạng thái theo máy trạng thái của backend, mã đơn để nhận món, thông tin quán.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '@/context/app-store';
 import { useAuth } from '@/context/auth-context';
 import { ApiError } from '@/lib/api';
-import { PAYMENT_METHODS, STORES } from '@/lib/mock-data';
+import { PAYMENT_METHODS, STORE } from '@/lib/mock-data';
 import { describeOptions, formatClock, formatDateTime, formatVnd } from '@/lib/format';
-import { directionsUrl } from '@/lib/geo';
 import { ORDER_STAGES, stageIndex, statusLabel } from '@/lib/pricing';
 import { useProductMap } from '@/lib/products';
 import type { Level, Order, SizeId } from '@/lib/types';
-import MockQr from '@/components/checkout/MockQr';
 import ProductImage from '@/components/menu/ProductImage';
 import Skeleton from '@/components/ui/Skeleton';
-import { AlertIcon, CheckIcon, ChevronLeftIcon, PhoneIcon, RouteIcon } from '@/components/ui/Icons';
+import { AlertIcon, CheckIcon, ChevronLeftIcon } from '@/components/ui/Icons';
 import InvoiceModal from './InvoiceModal';
 
 export default function OrderTracking({ orderId }: { orderId: string }) {
@@ -104,7 +102,6 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
   }
 
   const stage = stageIndex(order.status);
-  const store = STORES.find((s) => s.id === order.storeId) ?? STORES[0];
   const pickup = order.fulfillment === 'PICKUP';
   const unpaid = order.status === 'PENDING' || order.status === 'PAYMENT_FAILED';
   const message: Record<Order['status'], string> = {
@@ -112,7 +109,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
     PAYMENT_FAILED: 'Thanh toán chưa thành công. Bạn chưa bị trừ tiền; hãy huỷ đơn rồi đặt lại.',
     PAID: 'Đã thanh toán. Quầy đã nhận đơn và đang xếp lượt pha chế.',
     PREPARING: 'Barista đang pha món của bạn.',
-    READY: pickup ? `Món đã sẵn sàng. Tới quầy ${store.shortName} và đọc mã ${order.pickupCode}.` : 'Shipper đang trên đường giao tới bạn.',
+    READY: pickup ? `Món đã sẵn sàng. Tới quầy ${STORE.shortName} và đọc mã đơn ${order.id}.` : 'Shipper đang trên đường giao tới bạn.',
     COMPLETED: 'Đơn đã hoàn thành. Cảm ơn bạn đã chọn BrewLite!',
     CANCELLED: 'Đơn đã huỷ, món đã được trả lại kho.',
   };
@@ -202,44 +199,32 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
         </div>
       </section>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        {/* Mã lấy món */}
-        <section className="rounded-3xl bg-foam p-5 sm:p-6" aria-labelledby="code-title">
-          <h2 id="code-title" className="font-extrabold">
-            {pickup ? 'Mã lấy món' : 'Mã đơn hàng'}
-          </h2>
-          <div className={`mt-4 flex items-center gap-5 ${unpaid || order.status === 'CANCELLED' ? 'opacity-40' : ''}`}>
-            <MockQr value={`${order.id}-${order.pickupCode}`} className="h-32 w-32 shrink-0 rounded-xl" />
-            <div>
-              <p className="text-4xl font-extrabold tracking-[0.25em] tabular-nums text-espresso">{pickup ? order.pickupCode : order.id}</p>
-              <p className="mt-2 text-sm leading-snug text-roast/65">
-                {unpaid
-                  ? 'Mã chỉ dùng được sau khi thanh toán.'
+      {/* Nhận món: đọc mã đơn tại quầy (BrewLite chỉ có một quán) */}
+      <section className="mt-6 rounded-3xl bg-foam p-5 sm:p-6" aria-labelledby="pickup-title">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-64">
+            <h2 id="pickup-title" className="font-extrabold">
+              {pickup ? 'Nhận món tại quầy' : 'Giao tận nơi'}
+            </h2>
+            <p className="mt-1 text-sm text-roast/65">
+              {STORE.name}, {STORE.address}. Mở cửa {STORE.hours}.
+            </p>
+            <p className="mt-2 text-sm leading-snug text-roast/75">
+              {unpaid
+                ? 'Đơn chưa thanh toán nên quầy chưa pha món.'
+                : order.status === 'CANCELLED'
+                  ? 'Đơn đã huỷ.'
                   : pickup
-                    ? `Đưa mã QR cho nhân viên quét, hoặc đọc 4 số. ${order.pickupTime === 'Lấy ngay' ? '' : `Hẹn lấy lúc ${order.pickupTime}.`}`
+                    ? `Đọc mã đơn cho nhân viên khi tới quầy. ${order.pickupTime === 'Lấy ngay' ? '' : `Hẹn lấy lúc ${order.pickupTime}.`}`
                     : `Giao tới ${order.address}.`}
-              </p>
-            </div>
+            </p>
           </div>
-        </section>
-
-        {/* Quán thực hiện */}
-        <section className="rounded-3xl bg-foam p-5 sm:p-6" aria-labelledby="store-title">
-          <h2 id="store-title" className="font-extrabold">
-            {store.name}
-          </h2>
-          <p className="mt-1 text-sm text-roast/65">{store.address}</p>
-          <p className="mt-1 text-sm text-roast/65">Mở cửa {store.hours}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <a href={directionsUrl(store.lat, store.lng)} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center gap-2 rounded-full bg-espresso text-sm font-semibold text-foam hover:bg-roast">
-              <RouteIcon className="h-4 w-4" /> Chỉ đường
-            </a>
-            <a href={`tel:${store.hotline.replace(/\s/g, '')}`} className="flex h-11 items-center justify-center gap-2 rounded-full border-2 border-espresso text-sm font-semibold text-espresso hover:bg-espresso hover:text-foam">
-              <PhoneIcon className="h-4 w-4" /> {store.hotline}
-            </a>
-          </div>
-        </section>
-      </div>
+          <p className={`rounded-2xl bg-cream px-4 py-3 text-center ${unpaid || order.status === 'CANCELLED' ? 'opacity-40' : ''}`}>
+            <span className="block text-xs font-semibold text-roast/55">Mã đơn</span>
+            <span className="block text-2xl font-extrabold tracking-wider tabular-nums text-espresso">{order.id}</span>
+          </p>
+        </div>
+      </section>
 
       {/* Món trong đơn */}
       <section className="mt-6 rounded-3xl bg-foam p-5 sm:p-6" aria-labelledby="items-title">

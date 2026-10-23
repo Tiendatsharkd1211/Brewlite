@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/context/app-store';
 import { CART_BUMP_EVENT } from '@/lib/fly-to-cart';
+import { STORE } from '@/lib/mock-data';
 import SearchBox from '@/components/search/SearchBox';
-import { BagIcon } from '@/components/ui/Icons';
+import { BagIcon, PinIcon } from '@/components/ui/Icons';
 import NotificationBell from './NotificationBell';
-import StorePicker from './StorePicker';
 import UserMenu from './UserMenu';
 
 function LogoMark() {
@@ -54,7 +54,10 @@ export default function AppHeader() {
           <SearchBox />
         </div>
         <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
-          <StorePicker />
+          {/* BrewLite chỉ có một quán nhận đơn: hiện tên quán, không cần chọn */}
+          <span className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-roast/70 lg:flex" title={STORE.address}>
+            <PinIcon className="h-4 w-4" /> {STORE.shortName}
+          </span>
           <NotificationBell />
           <Link
             href="/checkout"

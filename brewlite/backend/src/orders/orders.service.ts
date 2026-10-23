@@ -4,6 +4,7 @@ import { sleep } from '../common/sleep';
 import { PrismaService } from '../prisma/prisma.service';
 import { isUniqueViolation } from '../prisma/prisma-errors';
 import { PromotionsService } from '../promotions/promotions.service';
+import { isWalletProvider, PROVIDER_NAMES } from '../wallets/wallet-rules';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { assertTransition, HAPPY_PATH_NEXT, OrderStatus } from './order-state-machine';
 import { DELIVERY_FEE, SIZE_EXTRA } from './pricing';
@@ -40,6 +41,13 @@ export class OrdersService {
    * Nhờ vậy dù 100 người bấm cùng lúc, tổng số đã bán không bao giờ vượt `stock`.
    */
   async create(userId: string, dto: CreateOrderDto) {
+    // Trả bằng ví/thẻ thì phải liên kết tài khoản ảo trước (tiền sẽ bị trừ vào tài khoản đó)
+    if (isWalletProvider(dto.paymentMethod)) {
+      const linked = await this.prisma.walletAccount.findUnique({ where: { userId_provider: { userId, provider: dto.paymentMethod } } });
+      if (!linked) {
+        throw new BadRequestException(`Bạn chưa liên kết ${PROVIDER_NAMES[dto.paymentMethod]}. Vào trang Tài khoản để liên kết tài khoản ảo trước khi thanh toán.`);
+      }
+    }
     for (let attempt = 1; ; attempt++) {
       try {
         return await this.prisma.$transaction((tx) => this.createInTx(tx, userId, dto), TX_OPTIONS);
@@ -130,10 +138,8 @@ export class OrdersService {
         voucherCode: promo.code,
         paymentMethod: dto.paymentMethod,
         fulfillment: dto.fulfillment,
-        storeId: dto.storeId,
         pickupTime: dto.pickupTime,
         address: dto.fulfillment === 'DELIVERY' ? (dto.address ?? '').trim() : '',
-        pickupCode: String(Math.floor(1000 + Math.random() * 9000)),
         items: { create: items },
       },
       include: ORDER_INCLUDE,

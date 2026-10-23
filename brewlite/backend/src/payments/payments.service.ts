@@ -6,12 +6,15 @@ import { OrderStatus } from '../orders/order-state-machine';
 import { PrismaService } from '../prisma/prisma.service';
 import { isUniqueViolation } from '../prisma/prisma-errors';
 import { pointsEarnedFor, pointsNeededFor } from '../promotions/voucher-rules';
+import { isWalletProvider } from '../wallets/wallet-rules';
+import { toWalletView, WalletsService } from '../wallets/wallets.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { MockPaymentGateway } from './mock-payment.gateway';
 
 export interface PaymentResult {
   payment: Payment;
   order: Prisma.OrderGetPayload<{ include: { items: true } }>;
+  /** Tài khoản ảo đã bị trừ tiền (số dư sau giao dịch); null khi trả bằng điểm */
+  wallet: ReturnType<typeof toWalletView> | null;
   /** true = đây là kết quả của lần gửi trước với cùng Idempotency-Key, không trừ tiền lần nữa */
   replayed: boolean;
 }
@@ -20,17 +23,19 @@ export interface PaymentResult {
 export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly gateway: MockPaymentGateway,
+    private readonly wallets: WalletsService,
   ) {}
 
   /**
-   * THANH TOÁN IDEMPOTENT (Task 8 + Task 10.2)
+   * THANH TOÁN IDEMPOTENT (Task 8 + Task 10.2), TRỪ TIỀN THẬT VÀO TÀI KHOẢN ẢO
    *
    * Client gửi header `Idempotency-Key` (một chuỗi ngẫu nhiên cho MỖI lần bấm "Thanh toán").
    * Mạng chập chờn khiến request bị gửi lại với CÙNG khoá thì:
-   *  - Khoá đã có trong bảng Payment => trả lại đúng kết quả cũ, không gọi cổng thanh toán lần 2.
+   *  - Khoá đã có trong bảng Payment => trả lại đúng kết quả cũ, không trừ tiền lần 2.
    *  - Hai request cùng khoá tới ĐỒNG THỜI => cả hai cố INSERT Payment, cột idempotencyKey là UNIQUE
    *    nên CSDL chỉ cho 1 request thắng; request thua đợi request thắng xử lý xong rồi trả cùng kết quả.
+   * Request thắng trừ số dư tài khoản ảo, đổi trạng thái đơn và cộng điểm trong CÙNG MỘT transaction:
+   * hoặc tất cả cùng thành công, hoặc không có gì thay đổi.
    * => Một khoá chỉ trừ tiền tối đa 1 lần và chỉ chuyển đơn sang PAID 1 lần.
    */
   async pay(userId: string, idempotencyKey: string, dto: CreatePaymentDto): Promise<PaymentResult> {
@@ -57,49 +62,56 @@ export class PaymentsService {
       throw err;
     }
 
-    // Gọi cổng thanh toán ngoài transaction (gọi mạng lâu, không nên giữ khoá CSDL)
-    let outcome: { success: boolean; reason?: string };
-    if (dto.method === 'POINTS') {
-      outcome = { success: true }; // trừ điểm làm trong transaction bên dưới
-    } else {
-      try {
-        outcome = await this.gateway.charge({ amount: order.total, method: dto.method, reference: idempotencyKey, simulate: dto.simulate });
-      } catch {
-        outcome = { success: false, reason: 'Cổng thanh toán không phản hồi' };
-      }
+    try {
+      const settled = await this.prisma.$transaction((tx) => this.settle(tx, payment.id, order.id, userId), TX_OPTIONS);
+      return { ...settled, replayed: false };
+    } catch (err) {
+      // Transaction đã rollback nên chưa trừ đồng nào; đánh dấu giao dịch thất bại để lần gửi lại không phải chờ
+      await this.prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED', failureReason: 'Máy chủ chưa xử lý được giao dịch, bạn chưa bị trừ tiền' } }).catch(() => undefined);
+      throw err;
     }
-
-    const settled = await this.prisma.$transaction((tx) => this.settle(tx, payment.id, order.id, userId, outcome), TX_OPTIONS);
-    return { ...settled, replayed: false };
   }
 
-  /** Ghi kết quả: cập nhật Payment, chuyển trạng thái đơn theo máy trạng thái, cộng/trừ điểm, đếm lượt dùng mã */
-  private async settle(tx: Prisma.TransactionClient, paymentId: string, orderId: string, userId: string, outcome: { success: boolean; reason?: string }) {
+  /** Ghi kết quả: trừ tiền tài khoản ảo / trừ điểm, chuyển trạng thái đơn theo máy trạng thái, cộng điểm, đếm lượt dùng mã */
+  private async settle(tx: Prisma.TransactionClient, paymentId: string, orderId: string, userId: string) {
+    // Khoá dòng đơn hàng: 2 giao dịch KHÁC khoá cho cùng 1 đơn phải xếp hàng, không cùng trừ tiền
+    await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { items: true } });
 
-    // Một giao dịch khác đã thanh toán đơn này trước (khác khoá): không được PAID lần 2
+    // Một giao dịch khác đã thanh toán đơn này trước: không trừ tiền, không PAID lần 2
     if (order.status !== 'PENDING' && order.status !== 'PAYMENT_FAILED') {
       const payment = await tx.payment.update({
         where: { id: paymentId },
-        data: { status: 'FAILED', failureReason: 'Đơn đã được thanh toán bởi giao dịch khác, giao dịch này sẽ được hoàn tiền' },
+        data: { status: 'FAILED', failureReason: 'Đơn đã được thanh toán bởi giao dịch khác, giao dịch này không trừ tiền' },
       });
-      return { payment, order };
+      return { payment, order, wallet: null };
     }
 
-    let success = outcome.success;
-    let reason = outcome.reason ?? null;
+    let success: boolean;
+    let reason: string | null = null;
     let pointsUsed = 0;
-    if (success && order.paymentMethod === 'POINTS') {
+    let wallet: Awaited<ReturnType<WalletsService['debitInTx']>>['wallet'] = null;
+
+    if (order.paymentMethod === 'POINTS') {
       pointsUsed = pointsNeededFor(order.total);
       // Trừ có điều kiện "còn đủ điểm": không bao giờ âm điểm dù bấm liên tục
       const res = await tx.user.updateMany({ where: { id: userId, loyaltyPoints: { gte: pointsUsed } }, data: { loyaltyPoints: { decrement: pointsUsed } } });
-      if (res.count === 0) {
-        success = false;
+      success = res.count > 0;
+      if (success) {
+        await tx.loyaltyTransaction.create({ data: { userId, orderId, delta: -pointsUsed, reason: `Thanh toán đơn ${orderId}` } });
+      } else {
         reason = 'Không đủ điểm BrewLite để thanh toán đơn này';
         pointsUsed = 0;
-      } else {
-        await tx.loyaltyTransaction.create({ data: { userId, orderId, delta: -pointsUsed, reason: `Thanh toán đơn ${orderId}` } });
       }
+    } else if (isWalletProvider(order.paymentMethod)) {
+      // Trừ tiền thật vào số dư tài khoản ảo đã liên kết
+      const debit = await this.wallets.debitInTx(tx, userId, order.paymentMethod, order.total, orderId);
+      success = debit.ok;
+      wallet = debit.wallet;
+      if (!debit.ok) reason = debit.reason;
+    } else {
+      success = false;
+      reason = 'Phương thức thanh toán không còn được hỗ trợ';
     }
 
     // Máy trạng thái: PAYMENT_FAILED phải quay lại PENDING ("thử lại") trước khi sang PAID / PAYMENT_FAILED
@@ -124,10 +136,10 @@ export class PaymentsService {
 
     const payment = await tx.payment.update({
       where: { id: paymentId },
-      data: { status: success ? 'SUCCEEDED' : 'FAILED', failureReason: success ? null : reason },
+      data: { status: success ? 'SUCCEEDED' : 'FAILED', failureReason: success ? null : reason, walletId: wallet?.id ?? null },
     });
     const fresh = await tx.order.findUniqueOrThrow({ where: { id: orderId }, include: { items: true } });
-    return { payment, order: fresh };
+    return { payment, order: fresh, wallet: wallet ? toWalletView(wallet) : null };
   }
 
   /** Trả lại kết quả của lần gửi trước với cùng khoá */
@@ -138,7 +150,8 @@ export class PaymentsService {
     const settled = payment.status === 'PROCESSING' ? await this.waitUntilSettled(payment.idempotencyKey) : payment;
     const order = await this.prisma.order.findFirst({ where: { id: settled.orderId, userId }, include: { items: true } });
     if (!order) throw new UnprocessableEntityException('Idempotency-Key không hợp lệ');
-    return { payment: settled, order, replayed: true };
+    const wallet = settled.walletId ? await this.prisma.walletAccount.findUnique({ where: { id: settled.walletId } }) : null;
+    return { payment: settled, order, wallet: wallet ? toWalletView(wallet) : null, replayed: true };
   }
 
   /** Request "thua" đợi request "thắng" xử lý xong (tối đa ~10 giây) */

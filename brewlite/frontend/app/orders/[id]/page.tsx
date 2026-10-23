@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OrderPage({ params }: Props) {
   const { id } = await params;
   return (
-    <AuthGate title="Đăng nhập để theo dõi đơn" description="Chỉ chủ tài khoản đặt đơn mới xem được trạng thái và mã lấy món.">
+    <AuthGate title="Đăng nhập để theo dõi đơn" description="Chỉ chủ tài khoản đặt đơn mới xem được trạng thái đơn.">
       <OrderTracking orderId={id} />
     </AuthGate>
   );

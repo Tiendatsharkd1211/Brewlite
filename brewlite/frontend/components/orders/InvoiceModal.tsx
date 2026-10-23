@@ -1,6 +1,6 @@
 'use client';
 
-import { PAYMENT_METHODS, STORES } from '@/lib/mock-data';
+import { PAYMENT_METHODS, STORE } from '@/lib/mock-data';
 import { describeOptions, formatDateTime, formatNumber, formatVnd } from '@/lib/format';
 import type { Order } from '@/lib/types';
 import Modal from '@/components/ui/Modal';
@@ -8,7 +8,6 @@ import { CloseIcon } from '@/components/ui/Icons';
 
 /** Hoá đơn điện tử của một đơn (dữ liệu mẫu, chưa phải hoá đơn có mã của cơ quan thuế) */
 export default function InvoiceModal({ order, onClose }: { order: Order | null; onClose: () => void }) {
-  const store = order ? STORES.find((s) => s.id === order.storeId) : null;
   return (
     <Modal open={Boolean(order)} titleId="invoice-title" onClose={onClose} wide>
       {order && (
@@ -29,7 +28,7 @@ export default function InvoiceModal({ order, onClose }: { order: Order | null; 
 
           <div className="mt-4 rounded-2xl bg-cream p-4 text-sm">
             <p className="font-bold">Công ty TNHH BrewLite (dữ liệu mẫu)</p>
-            <p className="text-roast/65">{store?.name}, {store?.address}</p>
+            <p className="text-roast/65">{STORE.name}, {STORE.address}</p>
             <p className="text-roast/65">Thanh toán: {PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.name}</p>
           </div>
 

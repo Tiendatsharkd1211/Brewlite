@@ -6,7 +6,7 @@
 //   - nhiều từ rút gọn:   "ca sua", "tra cam"        -> Cà phê sữa đá, Trà đào cam sả
 //   - tên gọi khác:       "cf", "cafe", "coffee"     -> Cà phê ...
 import { CATEGORIES } from './mock-data';
-import type { Product, Store } from './types';
+import type { Product } from './types';
 
 export type Range = [number, number];
 export interface Match {
@@ -140,20 +140,4 @@ export function searchProducts(products: Product[], query: string): ProductHit[]
     if (score) hits.push({ product, match: { score, ranges: [] } });
   }
   return hits.sort((a, b) => b.match.score - a.match.score || a.product.name.localeCompare(b.product.name, 'vi'));
-}
-
-export interface StoreHit {
-  store: Store;
-  match: Match;
-}
-
-export function searchStores(stores: Store[], query: string): StoreHit[] {
-  const hits: StoreHit[] = [];
-  for (const store of stores) {
-    const byName = matchText(store.shortName, query);
-    const byAddress = byName || normalizeQuery(query).length < 2 ? null : matchText(store.address, query);
-    if (byName) hits.push({ store, match: byName });
-    else if (byAddress) hits.push({ store, match: { score: byAddress.score - 20, ranges: [] } });
-  }
-  return hits.sort((a, b) => b.match.score - a.match.score);
 }

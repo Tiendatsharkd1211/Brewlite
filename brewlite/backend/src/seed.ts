@@ -38,6 +38,11 @@ const VOUCHERS = [
   { code: 'FREESHIP', type: 'FREESHIP' as const, label: 'Miễn phí giao hàng', requiresDelivery: true },
 ];
 
+const DEMO_WALLETS = [
+  { provider: 'MOMO' as const, maskedNumber: '090•••4567', balance: 300_000 },
+  { provider: 'CARD' as const, maskedNumber: '•••• 4242', balance: 20_000 },
+];
+
 async function main() {
   for (const t of TOPPINGS) {
     await prisma.topping.upsert({ where: { id: t.id }, update: {}, create: t });
@@ -52,9 +57,9 @@ async function main() {
   for (const v of VOUCHERS) {
     await prisma.voucher.upsert({ where: { code: v.code }, update: {}, create: v });
   }
-  const demo = await prisma.user.findUnique({ where: { email: 'demo@brewlite.vn' } });
+  let demo = await prisma.user.findUnique({ where: { email: 'demo@brewlite.vn' } });
   if (!demo) {
-    await prisma.user.create({
+    demo = await prisma.user.create({
       data: {
         email: 'demo@brewlite.vn',
         fullName: 'Khách Demo',
@@ -64,7 +69,16 @@ async function main() {
       },
     });
   }
-  console.log(`Đã nạp ${PRODUCTS.length} món, ${TOPPINGS.length} topping, ${VOUCHERS.length} mã giảm giá, tài khoản demo@brewlite.vn / Brewlite123`);
+  // Tài khoản ảo của khách demo: MoMo đủ tiền để demo thanh toán thành công,
+  // thẻ chỉ còn 20.000đ để demo thanh toán thất bại do không đủ số dư (PAYMENT_FAILED)
+  if ((await prisma.walletAccount.count({ where: { userId: demo.id } })) === 0) {
+    for (const w of DEMO_WALLETS) {
+      await prisma.walletAccount.create({
+        data: { ...w, userId: demo.id, holderName: demo.fullName, transactions: { create: { type: 'OPENING', amount: w.balance, balanceAfter: w.balance, note: 'Số dư ban đầu khi liên kết tài khoản ảo' } } },
+      });
+    }
+  }
+  console.log(`Đã nạp ${PRODUCTS.length} món, ${TOPPINGS.length} topping, ${VOUCHERS.length} mã giảm giá, tài khoản demo@brewlite.vn / Brewlite123 (ví MoMo ảo 300.000đ, thẻ ảo 20.000đ)`);
 }
 
 main()

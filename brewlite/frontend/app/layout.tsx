@@ -19,7 +19,7 @@ const beVietnam = Be_Vietnam_Pro({
 
 export const metadata: Metadata = {
   title: 'BrewLite – Đặt cà phê, thanh toán không tiền mặt',
-  description: 'Đặt món trước, thanh toán bằng ví điện tử, VietQR hoặc thẻ, tới quầy đọc mã là lấy.',
+  description: 'Đặt món trước tại BrewLite An Dương Vương, thanh toán bằng ví điện tử hoặc thẻ liên kết, tới quầy đọc mã đơn là lấy.',
 };
 
 export const viewport: Viewport = {

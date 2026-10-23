@@ -1,31 +1,31 @@
 'use client';
 
-// MÀN HÌNH TÀI KHOẢN: thẻ thành viên, lịch sử đơn, ví đã liên kết, đổi quà, lịch sử điểm, đăng xuất.
+// MÀN HÌNH TÀI KHOẢN: thẻ thành viên, tài khoản ảo liên kết, lịch sử đơn, đổi quà, lịch sử điểm, đăng xuất.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAppStore } from '@/context/app-store';
 import { useAuth } from '@/context/auth-context';
 import { ApiError } from '@/lib/api';
-import { PAYMENT_METHODS, REWARDS } from '@/lib/mock-data';
+import { REWARDS } from '@/lib/mock-data';
 import { formatDateTime, formatNumber, formatVnd } from '@/lib/format';
 import { tierOf } from '@/lib/pricing';
 import { useMyOrders } from '@/lib/use-orders';
-import type { Level, Order, PaymentMethodId, SizeId, User } from '@/lib/types';
+import type { Level, Order, SizeId, User } from '@/lib/types';
 import BackendStatus from '@/components/layout/BackendStatus';
 import { initialsOf } from '@/components/layout/UserMenu';
 import InvoiceModal from '@/components/orders/InvoiceModal';
 import Skeleton from '@/components/ui/Skeleton';
 import Toast from '@/components/ui/Toast';
 import { LogoutIcon } from '@/components/ui/Icons';
+import WalletManager from './WalletManager';
 
 const TIER_STYLE = { Silver: 'bg-foam/20 text-foam', Gold: 'bg-gold text-roast', Platinum: 'bg-foam text-roast' } as const;
-const LINKABLE: PaymentMethodId[] = ['MOMO', 'ZALOPAY', 'SHOPEEPAY', 'VNPAY', 'CARD'];
 
 export default function AccountView() {
   const router = useRouter();
   const { user, request, setUser, logout } = useAuth();
-  const { linkedWallets, toggleWallet, addManyToCart } = useAppStore();
+  const { addManyToCart } = useAppStore();
   const { orders } = useMyOrders();
   const [invoice, setInvoice] = useState<Order | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -101,6 +101,9 @@ export default function AccountView() {
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        {/* Tài khoản ảo liên kết: thanh toán trừ thẳng vào số dư */}
+        <WalletManager onMessage={setToast} />
+
         {/* Lịch sử đơn hàng */}
         <section className="rounded-3xl bg-foam p-5 sm:p-6">
           <div className="flex items-baseline justify-between gap-3">
@@ -149,38 +152,6 @@ export default function AccountView() {
               ))}
             </ul>
           )}
-        </section>
-
-        {/* Ví và phương thức thanh toán */}
-        <section className="rounded-3xl bg-foam p-5 sm:p-6">
-          <h2 className="text-lg font-extrabold">Ví và thẻ đã liên kết</h2>
-          <ul className="mt-3 space-y-2">
-            {LINKABLE.map((id) => {
-              const m = PAYMENT_METHODS.find((x) => x.id === id)!;
-              const linked = linkedWallets.includes(id);
-              return (
-                <li key={id} className="flex items-center gap-3 rounded-2xl border-2 border-roast/10 p-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xs font-extrabold text-white" style={{ backgroundColor: m.badgeColor }} aria-hidden="true">
-                    {m.badge}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">{m.name}</span>
-                    <span className={`block text-xs ${linked ? 'text-leaf' : 'text-roast/55'}`}>{linked ? (id === 'CARD' ? 'Visa •••• 4242 (demo)' : 'Đã liên kết') : 'Chưa liên kết'}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toggleWallet(id);
-                      setToast(linked ? `Đã huỷ liên kết ${m.name}.` : `Đã liên kết ${m.name} (giả lập).`);
-                    }}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${linked ? 'text-chili hover:bg-chili/10' : 'bg-espresso text-foam hover:bg-roast'}`}
-                  >
-                    {linked ? 'Huỷ liên kết' : 'Liên kết'}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
         </section>
 
         {/* Đổi quà */}
