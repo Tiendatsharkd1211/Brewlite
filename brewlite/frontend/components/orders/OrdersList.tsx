@@ -76,7 +76,7 @@ export default function OrdersList() {
           <ReceiptIcon className="h-8 w-8" />
         </span>
         <h2 className="mt-4 text-xl font-extrabold">Chưa có đơn hàng nào</h2>
-        <p className="mt-2 text-sm leading-relaxed text-roast/65">Đơn bạn đặt sẽ hiện ở đây, kèm mã lấy món và trạng thái pha chế theo thời gian thực.</p>
+        <p className="mt-2 text-sm leading-relaxed text-roast/65">Đơn bạn đặt sẽ hiện ở đây, kèm mã đơn và trạng thái pha chế theo thời gian thực.</p>
         <Link href="/menu" className="mt-6 inline-flex rounded-full bg-gold px-6 py-3 font-bold text-roast">
           Đặt món đầu tiên
         </Link>

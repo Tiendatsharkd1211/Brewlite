@@ -5,8 +5,8 @@ import { ClockIcon, SparkIcon, WalletIcon } from '@/components/ui/Icons';
 import { HERO_IMAGE, photo } from '@/lib/images';
 
 const PERKS = [
-  { Icon: ClockIcon, title: 'Đặt trước, không xếp hàng', text: 'Tới quầy đọc mã 4 số là lấy' },
-  { Icon: WalletIcon, title: '100% không tiền mặt', text: 'MoMo, ZaloPay, VietQR, thẻ' },
+  { Icon: ClockIcon, title: 'Đặt trước, không xếp hàng', text: 'Tới quầy An Dương Vương đọc mã đơn là lấy' },
+  { Icon: WalletIcon, title: '100% không tiền mặt', text: 'Trừ tiền vào ví hoặc thẻ ảo đã liên kết' },
   { Icon: SparkIcon, title: 'Tích điểm mỗi đơn', text: '1.000đ = 1 điểm, đổi quà ngay' },
 ];
 

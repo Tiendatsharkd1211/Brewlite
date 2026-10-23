@@ -3,22 +3,23 @@
 // MÀN HÌNH GIỎ HÀNG & THANH TOÁN KHÔNG DÙNG TIỀN MẶT (Task 5, 6, 8)
 // Luồng đúng đề bài:
 //   1. "Thanh toán ngay" -> POST /orders: backend tự tính lại tiền, giữ tồn kho, tạo đơn PENDING.
-//   2. VietQR: hiện mã QR, khách bấm "Tôi đã chuyển khoản". Ví / thẻ / điểm: hiện "Đang chờ xác nhận".
-//   3. POST /payments kèm header Idempotency-Key -> PAID (xoá giỏ, hiện xác nhận)
-//      hoặc PAYMENT_FAILED (GIỮ NGUYÊN giỏ hàng, cho thanh toán lại).
-//   4. Đổi phương thức / đóng giữa chừng -> POST /orders/:id/cancel để hoàn lại tồn kho.
+//   2. POST /payments kèm header Idempotency-Key: backend TRỪ TIỀN THẬT vào tài khoản ảo (ví/thẻ) đã liên kết
+//      -> đủ số dư: PAID (xoá giỏ, hiện xác nhận và số dư còn lại)
+//      -> không đủ số dư: PAYMENT_FAILED (GIỮ NGUYÊN giỏ hàng, cho nạp thêm tiền rồi thanh toán lại).
+//   3. Đổi phương thức / đóng giữa chừng -> POST /orders/:id/cancel để hoàn lại tồn kho.
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { MAX_QTY, useAppStore } from '@/context/app-store';
 import { useAuth } from '@/context/auth-context';
 import { ApiError } from '@/lib/api';
-import { PAYMENT_METHODS, STORES } from '@/lib/mock-data';
+import { PAYMENT_METHODS, STORE, isWalletMethod } from '@/lib/mock-data';
 import { describeOptions, formatNumber, formatVnd } from '@/lib/format';
 import { DELIVERY_FEE, POINT_VALUE, VOUCHER_HINT, applyVoucher, pointsEarnedFor } from '@/lib/pricing';
 import { PRODUCTS_KEY, useProductMap } from '@/lib/products';
-import type { Fulfillment, Order, PaymentMethodId, PaymentResult } from '@/lib/types';
+import type { Fulfillment, Order, PaymentMethodId, PaymentResult, Wallet } from '@/lib/types';
+import { WALLETS_KEY, useWalletActions, useWallets } from '@/lib/wallets';
 import ProductArt from '@/components/menu/ProductArt';
 import ProductImage from '@/components/menu/ProductImage';
 import { useProductSheet } from '@/components/product/ProductSheetProvider';
@@ -28,19 +29,18 @@ import QuantityStepper from '@/components/ui/QuantityStepper';
 import Skeleton from '@/components/ui/Skeleton';
 import { AlertIcon, EditIcon, LockIcon, TrashIcon } from '@/components/ui/Icons';
 import PaymentMethodList from './PaymentMethodList';
-import VietQrPanel from './VietQrPanel';
 
 type PayState =
   | { step: 'idle' }
   | { step: 'creating' }
-  | { step: 'qr'; order: Order; expiresAt: number }
   | { step: 'processing'; order: Order }
-  | { step: 'success'; order: Order }
-  | { step: 'failed'; reason: 'timeout' | 'declined' | 'server'; message: string; order: Order | null };
+  | { step: 'success'; order: Order; wallet: Wallet | null }
+  | { step: 'failed'; reason: 'declined' | 'server'; message: string; order: Order | null; wallet: Wallet | null };
 
-const QR_TTL_MS = 5 * 60 * 1000;
-/** Thời gian giả lập khách mở app ví và bấm xác nhận */
-const WALLET_CONFIRM_MS = 2200;
+/** Giữ màn hình "đang xử lý" tối thiểu một chút để khách kịp thấy bước trừ tiền (chỉ là hiệu ứng giao diện) */
+const MIN_PROCESSING_MS = 700;
+/** Số tiền nạp nhanh khi thanh toán bị từ chối vì không đủ số dư */
+const QUICK_TOPUP = 100_000;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -97,12 +97,14 @@ function ChoiceCard({ checked, onSelect, title, hint }: { checked: boolean; onSe
 export default function Checkout() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hydrated, cart, cartCount, subtotal, setQuantity, removeFromCart, clearCart, storeId, setStoreId, linkedWallets } = useAppStore();
+  const { hydrated, cart, cartCount, subtotal, setQuantity, removeFromCart, clearCart } = useAppStore();
   const { status: authStatus, user, request, refresh } = useAuth();
   const { openProduct } = useProductSheet();
   const productMap = useProductMap();
   const points = user?.points ?? 0;
   const isGuest = authStatus !== 'authed';
+  const { data: wallets } = useWallets();
+  const { topup } = useWalletActions();
 
   const [fulfillment, setFulfillment] = useState<Fulfillment>('pickup');
   const [timeMode, setTimeMode] = useState<'asap' | 'slot'>('asap');
@@ -113,11 +115,9 @@ export default function Checkout() {
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethodId | null>(null);
   const [pay, setPay] = useState<PayState>({ step: 'idle' });
-  /** Nút demo "giả lập thất bại" bấm trong lúc chờ xác nhận */
-  const simulateFailRef = useRef(false);
+  const [topupNote, setTopupNote] = useState<string | null>(null);
 
   const slots = useMemo(() => (hydrated ? buildSlots(new Date()) : []), [hydrated]);
-  const store = STORES.find((s) => s.id === storeId) ?? STORES[0];
 
   // ----- Tạm tính (backend sẽ tính lại khi tạo đơn) -----
   const voucher = appliedCode ? applyVoucher(appliedCode, subtotal, fulfillment, method) : null;
@@ -126,12 +126,19 @@ export default function Checkout() {
   const discount = voucher?.ok ? voucher.discount : 0;
   const total = Math.max(subtotal + fee - discount, 0);
   const pointsNeeded = Math.ceil(total / POINT_VALUE);
-  const methodName = PAYMENT_METHODS.find((m) => m.id === method)?.name ?? '';
+  const methodName = (id: PaymentMethodId) => PAYMENT_METHODS.find((m) => m.id === id)?.name ?? '';
+  const walletOf = (id: PaymentMethodId | null) => (isWalletMethod(id) ? wallets?.find((w) => w.provider === id) : undefined);
+  const selectedWallet = walletOf(method);
 
   // Đơn tăng lên mà không còn đủ điểm thì bỏ chọn "Điểm BrewLite"
   useEffect(() => {
     if (method === 'POINTS' && points < pointsNeeded) setMethod(null);
   }, [method, points, pointsNeeded]);
+
+  // Ví / thẻ đã chọn bị huỷ liên kết thì bỏ chọn
+  useEffect(() => {
+    if (wallets && isWalletMethod(method) && !wallets.some((w) => w.provider === method)) setMethod(null);
+  }, [wallets, method]);
 
   // ----- Điều kiện để bấm "Thanh toán ngay" -----
   const blockers: string[] = [];
@@ -154,7 +161,6 @@ export default function Checkout() {
         body: {
           items: cart.map((i) => ({ productId: i.productId, size: i.size, sugar: i.sugar, ice: i.ice, toppingIds: i.toppingIds, note: i.note, qty: i.quantity })),
           fulfillment: fulfillment === 'pickup' ? 'PICKUP' : 'DELIVERY',
-          storeId,
           pickupTime: fulfillment === 'pickup' ? (timeMode === 'asap' ? 'Lấy ngay' : slot) : 'Giao trong 25–35 phút',
           address: fulfillment === 'delivery' ? address.trim() : undefined,
           paymentMethod: method,
@@ -162,34 +168,33 @@ export default function Checkout() {
         },
       });
       queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY }); // tồn kho vừa thay đổi
-      if (method === 'VIETQR') setPay({ step: 'qr', order, expiresAt: Date.now() + QR_TTL_MS });
-      else void payOrder(order);
+      void payOrder(order);
     } catch (err) {
-      setPay({ step: 'failed', reason: 'server', message: errorText(err, 'Chưa tạo được đơn hàng.'), order: null });
+      setPay({ step: 'failed', reason: 'server', message: errorText(err, 'Chưa tạo được đơn hàng.'), order: null, wallet: null });
     }
   }
 
   // ----- Bước 2: thanh toán idempotent -----
   async function payOrder(order: Order) {
-    simulateFailRef.current = false;
+    setTopupNote(null);
     setPay({ step: 'processing', order });
-    await sleep(order.paymentMethod === 'VIETQR' ? 900 : WALLET_CONFIRM_MS);
     const key = newIdempotencyKey();
-    const body = { orderId: order.id, method: order.paymentMethod, ...(simulateFailRef.current ? { simulate: 'fail' } : {}) };
+    const body = { orderId: order.id, method: order.paymentMethod };
     try {
-      const result = await sendPayment(key, body);
+      const [result] = await Promise.all([sendPayment(key, body), sleep(MIN_PROCESSING_MS)]);
+      queryClient.invalidateQueries({ queryKey: WALLETS_KEY }); // số dư tài khoản ảo vừa thay đổi
       if (result.order.status === 'PAID') {
         clearCart();
         setAppliedCode(null);
         setVoucherInput('');
-        setPay({ step: 'success', order: result.order });
+        setPay({ step: 'success', order: result.order, wallet: result.wallet });
         refresh().catch(() => undefined); // điểm thưởng vừa được cộng
         queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
       } else {
-        setPay({ step: 'failed', reason: 'declined', message: result.payment.failureReason ?? 'Giao dịch bị từ chối.', order: result.order });
+        setPay({ step: 'failed', reason: 'declined', message: result.payment.failureReason ?? 'Giao dịch bị từ chối.', order: result.order, wallet: result.wallet });
       }
     } catch (err) {
-      setPay({ step: 'failed', reason: 'server', message: errorText(err, 'Máy chủ chưa xử lý được giao dịch.'), order });
+      setPay({ step: 'failed', reason: 'server', message: errorText(err, 'Máy chủ chưa xử lý được giao dịch.'), order, wallet: null });
     }
   }
 
@@ -215,8 +220,20 @@ export default function Checkout() {
       void startPayment();
       return;
     }
-    if (pay.order.paymentMethod === 'VIETQR') setPay({ step: 'qr', order: pay.order, expiresAt: Date.now() + QR_TTL_MS });
-    else void payOrder(pay.order);
+    void payOrder(pay.order);
+  }
+
+  /** Không đủ số dư: nạp nhanh vào đúng tài khoản ảo vừa bị từ chối, rồi khách bấm "Thanh toán lại" */
+  async function quickTopup() {
+    if (pay.step !== 'failed' || !pay.wallet) return;
+    const wallet = pay.wallet;
+    try {
+      const updated = await topup.mutateAsync({ walletId: wallet.id, amount: QUICK_TOPUP });
+      setPay({ ...pay, wallet: updated });
+      setTopupNote(`Đã nạp ${formatVnd(QUICK_TOPUP)}, số dư mới ${formatVnd(updated.balance)}.`);
+    } catch (err) {
+      setTopupNote(errorText(err, 'Chưa nạp được tiền, thử lại sau.'));
+    }
   }
 
   /** Bỏ đơn đang dở để chọn lại: huỷ đơn (CANCELLED) và hoàn tồn kho, giỏ hàng giữ nguyên */
@@ -235,10 +252,6 @@ export default function Checkout() {
     },
     [request, queryClient],
   );
-
-  const expireQr = useCallback(() => {
-    setPay((p) => (p.step === 'qr' ? { step: 'failed', reason: 'timeout', message: 'Mã QR chỉ dùng được trong 5 phút. Bạn chưa bị trừ tiền.', order: p.order } : p));
-  }, []);
 
   function applyCode(e: FormEvent) {
     e.preventDefault();
@@ -306,22 +319,12 @@ export default function Checkout() {
                 ))}
               </div>
 
-              <label htmlFor="store" className="mt-5 block text-sm font-semibold">
-                {fulfillment === 'pickup' ? 'Quán nhận món' : 'Quán thực hiện đơn'}
-              </label>
-              <select
-                id="store"
-                value={storeId}
-                onChange={(e) => setStoreId(e.target.value)}
-                className="mt-1.5 h-11 w-full rounded-xl border-2 border-roast/10 bg-foam px-3 focus:border-espresso focus:outline-none"
-              >
-                {STORES.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-roast/55">{store.address}</p>
+              <div className="mt-5 rounded-2xl bg-cream px-4 py-3">
+                <p className="text-sm font-semibold">{fulfillment === 'pickup' ? 'Quán nhận món' : 'Quán thực hiện đơn'}: {STORE.name}</p>
+                <p className="mt-0.5 text-xs text-roast/60">
+                  {STORE.address}. Mở cửa {STORE.hours}.
+                </p>
+              </div>
 
               {fulfillment === 'pickup' ? (
                 <>
@@ -367,7 +370,7 @@ export default function Checkout() {
                     autoComplete="street-address"
                     className="mt-1.5 h-11 w-full rounded-xl border-2 border-roast/10 bg-foam px-3 placeholder:text-roast/40 focus:border-espresso focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-roast/55">Giao trong 25–35 phút từ quán {store.shortName}.</p>
+                  <p className="mt-1 text-xs text-roast/55">Giao trong 25–35 phút từ quán {STORE.shortName}.</p>
                 </>
               )}
             </Panel>
@@ -466,7 +469,7 @@ export default function Checkout() {
 
             {/* 4. Phương thức thanh toán không tiền mặt */}
             <Panel title="Thanh toán" id="payment">
-              <PaymentMethodList value={method} onChange={setMethod} points={points} pointsNeeded={pointsNeeded} linkedWallets={linkedWallets} />
+              <PaymentMethodList value={method} onChange={setMethod} points={points} pointsNeeded={pointsNeeded} total={total} wallets={wallets} />
             </Panel>
           </div>
 
@@ -499,6 +502,11 @@ export default function Checkout() {
               <p className="mt-1 text-right text-xs text-roast/55">
                 {method === 'POINTS' ? `Trừ ${formatNumber(pointsNeeded)} điểm` : `Tích ${formatNumber(pointsEarnedFor(total))} điểm sau khi thanh toán`}
               </p>
+              {selectedWallet && (
+                <p className="mt-1 text-right text-xs tabular-nums text-roast/55">
+                  Trừ vào tài khoản ảo {selectedWallet.maskedNumber}, số dư {formatVnd(selectedWallet.balance)}
+                </p>
+              )}
             </section>
 
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-roast/10 bg-foam px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:static md:mt-4 md:border-0 md:bg-transparent md:p-0">
@@ -527,35 +535,19 @@ export default function Checkout() {
         </div>
       )}
 
-      {/* ===== Modal: VietQR ===== */}
-      <Modal open={pay.step === 'qr'} titleId="pay-dialog-title" onClose={() => pay.step === 'qr' && abandon(pay.order)} wide>
-        {pay.step === 'qr' && (
-          <VietQrPanel
-            orderCode={pay.order.id}
-            amount={pay.order.total}
-            expiresAt={pay.expiresAt}
-            onPaid={() => void payOrder(pay.order)}
-            onExpire={expireQr}
-            onCancel={() => abandon(pay.order)}
-          />
-        )}
-      </Modal>
-
       {/* ===== Modal: đang tạo đơn / đang chờ xác nhận (không đóng được) ===== */}
       <Modal open={pay.step === 'creating' || pay.step === 'processing'} titleId="processing-title">
         <div className="text-center" aria-busy="true">
           <span className="mx-auto block h-14 w-14 animate-spin rounded-full border-4 border-roast/10 border-t-espresso" aria-hidden="true" />
           <h2 id="processing-title" className="mt-5 text-xl font-extrabold">
-            {pay.step === 'creating' ? 'Đang tạo đơn hàng' : 'Đang chờ xác nhận thanh toán'}
+            {pay.step === 'creating' ? 'Đang tạo đơn hàng' : 'Đang thanh toán'}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-roast/65">
             {pay.step === 'creating' && 'Kiểm tra tồn kho và giữ món cho bạn…'}
-            {pay.step === 'processing' && pay.order.paymentMethod === 'VIETQR' && 'Đang đối soát giao dịch chuyển khoản với ngân hàng.'}
-            {pay.step === 'processing' && pay.order.paymentMethod === 'CARD' && 'Đang chuyển tới cổng thanh toán thẻ an toàn.'}
             {pay.step === 'processing' && pay.order.paymentMethod === 'POINTS' && `Đang trừ ${formatNumber(Math.ceil(pay.order.total / POINT_VALUE))} điểm BrewLite.`}
             {pay.step === 'processing' &&
-              ['MOMO', 'ZALOPAY', 'SHOPEEPAY', 'VNPAY'].includes(pay.order.paymentMethod) &&
-              `Mở ứng dụng ${methodName} và xác nhận thanh toán ${formatVnd(pay.order.total)}.`}
+              isWalletMethod(pay.order.paymentMethod) &&
+              `Đang trừ ${formatVnd(pay.order.total)} vào tài khoản ảo ${methodName(pay.order.paymentMethod)} ${walletOf(pay.order.paymentMethod)?.maskedNumber ?? ''}.`}
           </p>
           {pay.step === 'processing' && <p className="mt-3 inline-flex rounded-full bg-cream px-3 py-1 text-xs font-semibold">Đơn {pay.order.id}: PENDING</p>}
           <div className="mx-auto mt-5 max-w-xs space-y-2">
@@ -563,11 +555,6 @@ export default function Checkout() {
             <Skeleton className="h-3 w-4/5" />
           </div>
           <p className="mt-5 text-xs text-roast/50">Đừng đóng trang trong lúc chờ.</p>
-          {pay.step === 'processing' && pay.order.paymentMethod !== 'POINTS' && (
-            <button type="button" onClick={() => (simulateFailRef.current = true)} className="mt-3 text-xs text-roast/50 underline underline-offset-4">
-              Demo: giả lập giao dịch thất bại
-            </button>
-          )}
         </div>
       </Modal>
 
@@ -589,16 +576,26 @@ export default function Checkout() {
               <span className="rounded-full bg-leaf/15 px-2 py-0.5 text-xs font-bold text-leaf">{pay.order.status}</span>
             </p>
             {pay.order.fulfillment === 'PICKUP' ? (
-              <div className="mt-5 rounded-2xl bg-cream px-4 py-4">
-                <p className="text-sm text-roast/65">Mã lấy món tại quầy {STORES.find((s) => s.id === pay.order.storeId)?.shortName}</p>
-                <p className="mt-1 text-4xl font-extrabold tracking-[0.3em] tabular-nums text-espresso">{pay.order.pickupCode}</p>
-                <p className="mt-1 text-xs text-roast/55">Mời bạn tới quầy lấy nước. {pay.order.pickupTime === 'Lấy ngay' ? 'Món sẵn sàng sau 5–10 phút.' : `Hẹn lấy lúc ${pay.order.pickupTime}.`}</p>
+              <div className="mt-5 rounded-2xl bg-cream px-4 py-4 text-sm">
+                <p>
+                  Mời bạn tới quầy <b>{STORE.name}</b> lấy nước, đọc mã đơn <b>#{pay.order.id}</b> cho nhân viên.
+                </p>
+                <p className="mt-1 text-xs text-roast/55">{pay.order.pickupTime === 'Lấy ngay' ? 'Món sẵn sàng sau 5–10 phút.' : `Hẹn lấy lúc ${pay.order.pickupTime}.`}</p>
               </div>
             ) : (
               <p className="mt-5 rounded-2xl bg-cream px-4 py-4 text-sm">Shipper sẽ gọi bạn khi tới {pay.order.address}.</p>
             )}
             <p className="mt-4 text-sm">
-              Đã thanh toán <b className="tabular-nums">{formatVnd(pay.order.total)}</b> qua {PAYMENT_METHODS.find((m) => m.id === pay.order.paymentMethod)?.name}
+              {pay.wallet ? (
+                <>
+                  Đã trừ <b className="tabular-nums">{formatVnd(pay.order.total)}</b> vào tài khoản ảo {methodName(pay.order.paymentMethod)} {pay.wallet.maskedNumber}, số dư còn{' '}
+                  <b className="tabular-nums">{formatVnd(pay.wallet.balance)}</b>
+                </>
+              ) : (
+                <>
+                  Đã thanh toán <b className="tabular-nums">{formatVnd(pay.order.total)}</b> bằng {methodName(pay.order.paymentMethod)}
+                </>
+              )}
               {pay.order.pointsEarned > 0 && `, tích ${formatNumber(pay.order.pointsEarned)} điểm`}.
             </p>
             <Link href={`/orders/${pay.order.id}`} className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-gold font-bold text-roast hover:bg-gold-deep hover:text-foam">
@@ -619,7 +616,7 @@ export default function Checkout() {
               <AlertIcon className="h-9 w-9" />
             </span>
             <h2 id="failed-title" className="mt-4 text-2xl font-extrabold">
-              {pay.reason === 'timeout' ? 'Mã thanh toán đã hết hạn' : pay.reason === 'declined' ? 'Thanh toán không thành công' : 'Chưa xử lý được đơn hàng'}
+              {pay.reason === 'declined' ? 'Thanh toán không thành công' : 'Chưa xử lý được đơn hàng'}
             </h2>
             {pay.order && (
               <p className="mt-2 text-sm">
@@ -630,8 +627,28 @@ export default function Checkout() {
             <p className="mt-2 text-sm leading-relaxed text-roast/70">
               {pay.message} Giỏ hàng của bạn vẫn được giữ nguyên.
             </p>
+            {pay.reason === 'declined' && pay.wallet && (
+              <div className="mt-4 rounded-2xl bg-cream px-4 py-3 text-sm">
+                <p className="tabular-nums">
+                  {methodName(pay.wallet.provider)} {pay.wallet.maskedNumber}: số dư <b>{formatVnd(pay.wallet.balance)}</b>
+                </p>
+                <button
+                  type="button"
+                  onClick={quickTopup}
+                  disabled={topup.isPending}
+                  className="mt-2 rounded-full border-2 border-espresso px-4 py-1.5 font-semibold text-espresso hover:bg-espresso hover:text-foam disabled:opacity-60"
+                >
+                  {topup.isPending ? 'Đang nạp…' : `Nạp ${formatVnd(QUICK_TOPUP)} vào tài khoản ảo`}
+                </button>
+                {topupNote && (
+                  <p className="mt-2 text-xs text-roast/70" role="status">
+                    {topupNote}
+                  </p>
+                )}
+              </div>
+            )}
             <button type="button" autoFocus onClick={retry} className="mt-6 h-12 w-full rounded-full bg-gold font-bold text-roast hover:bg-gold-deep hover:text-foam">
-              {pay.reason === 'timeout' ? 'Tạo mã QR mới' : 'Thanh toán lại'}
+              Thanh toán lại
             </button>
             <button type="button" onClick={() => abandon(pay.order)} className="mt-3 text-sm font-semibold text-espresso underline underline-offset-4">
               Đổi phương thức khác

@@ -15,7 +15,8 @@ export class PaymentsController {
   /**
    * POST /payments
    * Header bắt buộc: Idempotency-Key: <chuỗi ngẫu nhiên 8–128 ký tự, ví dụ UUID>
-   * Body: { orderId, method, simulate? }
+   * Body: { orderId, method }
+   * Tiền được trừ thật vào tài khoản ảo đã liên kết ứng với `method` (hoặc trừ điểm nếu method = POINTS).
    */
   @Post()
   @HttpCode(200)

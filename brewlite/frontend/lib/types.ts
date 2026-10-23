@@ -3,7 +3,9 @@ export type SizeId = 'S' | 'M' | 'L';
 export type Level = 0 | 30 | 50 | 100;
 /** Hình thức nhận món trên giao diện (gửi lên API dạng PICKUP / DELIVERY) */
 export type Fulfillment = 'pickup' | 'delivery';
-export type PaymentMethodId = 'MOMO' | 'ZALOPAY' | 'SHOPEEPAY' | 'VNPAY' | 'VIETQR' | 'CARD' | 'POINTS';
+export type PaymentMethodId = 'MOMO' | 'ZALOPAY' | 'SHOPEEPAY' | 'VNPAY' | 'CARD' | 'POINTS';
+/** Các phương thức trừ tiền vào tài khoản ảo liên kết (mọi phương thức trừ POINTS) */
+export type WalletProvider = Exclude<PaymentMethodId, 'POINTS'>;
 export type OrderStatus = 'PENDING' | 'PAID' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED' | 'PAYMENT_FAILED';
 
 export interface Category {
@@ -38,15 +40,12 @@ export interface Product {
   toppings: Topping[];
 }
 
+/** Chi nhánh duy nhất nhận đơn */
 export interface Store {
-  id: string;
   name: string;
   shortName: string;
   address: string;
-  hotline: string;
   hours: string;
-  lat: number;
-  lng: number;
 }
 
 /** Một dòng trong giỏ hàng (lưu ở trình duyệt bằng Zustand) */
@@ -90,10 +89,8 @@ export interface Order {
   voucherCode: string | null;
   paymentMethod: PaymentMethodId;
   fulfillment: 'PICKUP' | 'DELIVERY';
-  storeId: string;
   pickupTime: string;
   address: string;
-  pickupCode: string;
   pointsEarned: number;
   pointsUsed: number;
   createdAt: string;
@@ -107,14 +104,39 @@ export interface Payment {
   idempotencyKey: string;
   amount: number;
   method: PaymentMethodId;
+  walletId: string | null;
   status: 'PROCESSING' | 'SUCCEEDED' | 'FAILED';
   failureReason: string | null;
+}
+
+/** Một dòng biến động số dư của tài khoản ảo */
+export interface WalletTransaction {
+  id: string;
+  type: 'OPENING' | 'TOPUP' | 'PAYMENT';
+  amount: number;
+  balanceAfter: number;
+  orderId: string | null;
+  note: string;
+  createdAt: string;
+}
+
+/** Tài khoản ảo (ví / thẻ) đã liên kết, trả về từ GET /wallets */
+export interface Wallet {
+  id: string;
+  provider: WalletProvider;
+  holderName: string;
+  maskedNumber: string;
+  balance: number;
+  createdAt: string;
+  transactions?: WalletTransaction[];
 }
 
 /** Kết quả POST /payments */
 export interface PaymentResult {
   payment: Payment;
   order: Order;
+  /** Tài khoản ảo vừa bị trừ tiền (số dư sau giao dịch); null khi trả bằng điểm */
+  wallet: Wallet | null;
   /** true = backend trả lại kết quả cũ của cùng Idempotency-Key, không trừ tiền lần 2 */
   replayed: boolean;
 }

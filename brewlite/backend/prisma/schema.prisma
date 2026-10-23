@@ -23,7 +23,6 @@ enum PaymentMethod {
   ZALOPAY
   SHOPEEPAY
   VNPAY
-  VIETQR
   CARD
   POINTS
 }
@@ -32,6 +31,13 @@ enum PaymentStatus {
   PROCESSING
   SUCCEEDED
   FAILED
+}
+
+/// Loại biến động số dư của tài khoản ảo
+enum WalletTxType {
+  OPENING // số dư ban đầu khi liên kết
+  TOPUP // nạp thêm tiền
+  PAYMENT // trừ tiền khi thanh toán đơn
 }
 
 enum Size {
@@ -59,6 +65,7 @@ model User {
   createdAt     DateTime             @default(now())
   orders        Order[]
   loyaltyLogs   LoyaltyTransaction[]
+  wallets       WalletAccount[]
 }
 
 model Product {
@@ -100,10 +107,8 @@ model Order {
   voucherCode   String?
   paymentMethod PaymentMethod
   fulfillment   Fulfillment
-  storeId       String
   pickupTime    String
   address       String        @default("")
-  pickupCode    String
   pointsEarned  Int           @default(0)
   pointsUsed    Int           @default(0)
   createdAt     DateTime      @default(now())
@@ -132,16 +137,18 @@ model OrderItem {
 }
 
 model Payment {
-  id             String        @id @default(uuid())
+  id             String         @id @default(uuid())
   orderId        String
-  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  idempotencyKey String        @unique // khoá chống trùng: gửi lại cùng khoá không trừ tiền lần 2
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  idempotencyKey String         @unique // khoá chống trùng: gửi lại cùng khoá không trừ tiền lần 2
   amount         Int
   method         PaymentMethod
-  status         PaymentStatus @default(PROCESSING)
+  walletId       String? // tài khoản ảo bị trừ tiền (null khi trả bằng điểm)
+  wallet         WalletAccount? @relation(fields: [walletId], references: [id], onDelete: SetNull)
+  status         PaymentStatus  @default(PROCESSING)
   failureReason  String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([orderId])
 }
@@ -170,4 +177,36 @@ model LoyaltyTransaction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// Tài khoản ảo (ví điện tử hoặc thẻ) khách liên kết vào BrewLite.
+/// Thanh toán thành công thì trừ thẳng vào `balance`; không đủ số dư thì đơn sang PAYMENT_FAILED.
+model WalletAccount {
+  id           String              @id @default(uuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     PaymentMethod // MOMO | ZALOPAY | SHOPEEPAY | VNPAY | CARD (không dùng POINTS)
+  holderName   String
+  maskedNumber String // số điện thoại ví hoặc số thẻ đã che, ví dụ "090•••4567", "•••• 4242"
+  balance      Int // số dư, đơn vị đồng, không bao giờ âm
+  createdAt    DateTime            @default(now())
+  transactions WalletTransaction[]
+  payments     Payment[]
+
+  @@unique([userId, provider]) // mỗi loại ví/thẻ liên kết 1 tài khoản
+}
+
+/// Sổ biến động số dư: mỗi lần nạp hoặc trừ tiền ghi 1 dòng
+model WalletTransaction {
+  id           String        @id @default(uuid())
+  walletId     String
+  wallet       WalletAccount @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type         WalletTxType
+  amount       Int // dương = cộng tiền, âm = trừ tiền
+  balanceAfter Int
+  orderId      String?
+  note         String
+  createdAt    DateTime      @default(now())
+
+  @@index([walletId, createdAt])
 }

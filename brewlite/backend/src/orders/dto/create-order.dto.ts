@@ -2,7 +2,8 @@ import { Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { LEVELS } from '../pricing';
 
-export const PAYMENT_METHODS = ['MOMO', 'ZALOPAY', 'SHOPEEPAY', 'VNPAY', 'VIETQR', 'CARD', 'POINTS'] as const;
+/** Ví điện tử / thẻ: trừ tiền vào tài khoản ảo đã liên kết. POINTS: trừ điểm BrewLite. */
+export const PAYMENT_METHODS = ['MOMO', 'ZALOPAY', 'SHOPEEPAY', 'VNPAY', 'CARD', 'POINTS'] as const;
 export type PaymentMethodValue = (typeof PAYMENT_METHODS)[number];
 
 /** Một dòng giỏ hàng. Chỉ gửi lựa chọn, KHÔNG gửi giá: giá do backend tính từ CSDL. */
@@ -48,9 +49,6 @@ export class CreateOrderDto {
 
   @IsIn(['PICKUP', 'DELIVERY'])
   fulfillment!: 'PICKUP' | 'DELIVERY';
-
-  @IsString()
-  storeId!: string;
 
   @IsString()
   @MaxLength(40)

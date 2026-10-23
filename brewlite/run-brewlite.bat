@@ -157,6 +157,8 @@ exit /b 1
 :dbfail
 echo [LOI] Khong tao duoc bang trong PostgreSQL. Kiem tra Docker Desktop dang chay
 echo va DATABASE_URL trong backend\.env. Chup man hinh cua so nay gui len de xem.
+echo Neu loi nhac toi "data loss" hoac "cannot be executed": CSDL dang la ban cu,
+echo hay chay reset-database.bat roi chay lai file nay.
 pause
 exit /b 1
 

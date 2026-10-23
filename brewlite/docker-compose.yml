@@ -12,7 +12,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_v2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U brewlite -d brewlite"]
       interval: 3s
@@ -43,4 +43,5 @@ services:
       - backend
 
 volumes:
-  pgdata:
+  # Đổi tên kho dữ liệu khi lược đồ CSDL thay đổi lớn (thêm tài khoản ảo, bỏ chi nhánh) để có CSDL sạch
+  pgdata_v2:

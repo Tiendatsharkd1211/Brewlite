@@ -24,7 +24,7 @@ export interface VoucherContext {
 
 export type VoucherOutcome = { ok: true; discount: number; freeShip: boolean } | { ok: false; reason: string };
 
-const METHOD_NAMES: Record<string, string> = { MOMO: 'Ví MoMo', ZALOPAY: 'ZaloPay', SHOPEEPAY: 'ShopeePay', VNPAY: 'VNPay', VIETQR: 'VietQR', CARD: 'thẻ', POINTS: 'điểm' };
+const METHOD_NAMES: Record<string, string> = { MOMO: 'Ví MoMo', ZALOPAY: 'ZaloPay', SHOPEEPAY: 'ShopeePay', VNPAY: 'VNPay', CARD: 'thẻ', POINTS: 'điểm' };
 
 export function evaluateVoucher(v: VoucherLike | null, ctx: VoucherContext): VoucherOutcome {
   if (!v || !v.active) return { ok: false, reason: 'Mã giảm giá không tồn tại hoặc đã hết hạn' };
