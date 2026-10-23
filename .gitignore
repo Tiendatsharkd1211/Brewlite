@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+.env
+.env.local
+!.env.example
+.DS_Store
+# Dữ liệu demo do backend tự tạo (tài khoản, đơn hàng)
+backend/data/
+# Tệp do Next.js / TypeScript tự sinh
+next-env.d.ts
+*.tsbuildinfo
