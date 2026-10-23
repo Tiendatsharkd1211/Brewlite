@@ -21,7 +21,12 @@ export function useMyOrders() {
   }, [request]);
 
   useEffect(() => {
-    if (status === 'authed') reload();
+    if (status !== 'authed') return;
+    reload();
+    // Quay lại tab (ví dụ sau khi quầy vừa đổi trạng thái đơn) thì tải lại để thấy trạng thái mới
+    const onFocus = () => reload();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [status, reload]);
 
   return { orders, error, reload };

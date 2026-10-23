@@ -184,12 +184,7 @@ export default function Checkout() {
       const [result] = await Promise.all([sendPayment(key, body), sleep(MIN_PROCESSING_MS)]);
       queryClient.invalidateQueries({ queryKey: WALLETS_KEY }); // số dư tài khoản ảo vừa thay đổi
       if (result.order.status === 'PAID') {
-        clearCart();
-        setAppliedCode(null);
-        setVoucherInput('');
-        setPay({ step: 'success', order: result.order, wallet: result.wallet });
-        refresh().catch(() => undefined); // điểm thưởng vừa được cộng
-        queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
+        finishSuccess(result.order, result.wallet);
       } else {
         setPay({ step: 'failed', reason: 'declined', message: result.payment.failureReason ?? 'Giao dịch bị từ chối.', order: result.order, wallet: result.wallet });
       }
@@ -213,14 +208,39 @@ export default function Checkout() {
     }
   }
 
+  /** Đơn đã PAID: xoá giỏ, hiện màn hình xác nhận, cập nhật điểm và tồn kho */
+  function finishSuccess(order: Order, wallet: Wallet | null) {
+    clearCart();
+    setAppliedCode(null);
+    setVoucherInput('');
+    setPay({ step: 'success', order, wallet });
+    refresh().catch(() => undefined); // điểm thưởng vừa được cộng
+    queryClient.invalidateQueries({ queryKey: PRODUCTS_KEY });
+  }
+
   /** Thanh toán lại cùng đơn (đơn đang PENDING hoặc PAYMENT_FAILED) */
-  function retry() {
+  async function retry() {
     if (pay.step !== 'failed') return;
     if (!pay.order) {
       void startPayment();
       return;
     }
-    void payOrder(pay.order);
+    // Lần trước có thể đã trừ tiền xong nhưng mất mạng lúc nhận kết quả: hỏi lại trạng thái đơn trước khi trả lần nữa
+    let order = pay.order;
+    setPay({ step: 'processing', order });
+    try {
+      order = await request<Order>(`/orders/${encodeURIComponent(order.id)}`);
+    } catch {
+      // Không hỏi được thì vẫn thử thanh toán; backend tự chặn việc trừ tiền 2 lần cho cùng một đơn
+    }
+    if (order.status === 'PENDING' || order.status === 'PAYMENT_FAILED') {
+      void payOrder(order);
+    } else if (order.status === 'CANCELLED') {
+      setPay({ step: 'failed', reason: 'server', message: 'Đơn cũ đã bị huỷ. Bấm "Thanh toán lại" để tạo đơn mới.', order: null, wallet: null });
+    } else {
+      queryClient.invalidateQueries({ queryKey: WALLETS_KEY });
+      finishSuccess(order, null);
+    }
   }
 
   /** Không đủ số dư: nạp nhanh vào đúng tài khoản ảo vừa bị từ chối, rồi khách bấm "Thanh toán lại" */
