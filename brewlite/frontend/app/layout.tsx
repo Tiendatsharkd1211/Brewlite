@@ -2,11 +2,9 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import { AppStoreProvider } from '@/context/app-store';
-import { AuthProvider } from '@/context/auth-context';
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNav from '@/components/layout/BottomNav';
 import QueryProvider from '@/components/layout/QueryProvider';
-import { ProductSheetProvider } from '@/components/product/ProductSheetProvider';
 import './globals.css';
 
 // Be Vietnam Pro: font thiết kế cho tiếng Việt, dấu không bị lệch ở cỡ chữ nhỏ
@@ -32,15 +30,11 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="vi" className={beVietnam.variable}>
       <body className="min-h-dvh font-sans antialiased">
         <QueryProvider>
-          <AuthProvider>
-            <AppStoreProvider>
-              <ProductSheetProvider>
-                <AppHeader />
-                {children}
-                <BottomNav />
-              </ProductSheetProvider>
-            </AppStoreProvider>
-          </AuthProvider>
+          <AppStoreProvider>
+            <AppHeader />
+            {children}
+            <BottomNav />
+          </AppStoreProvider>
         </QueryProvider>
       </body>
     </html>

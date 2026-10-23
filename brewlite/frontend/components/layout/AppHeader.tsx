@@ -4,11 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/context/app-store';
 import { CART_BUMP_EVENT } from '@/lib/fly-to-cart';
-import SearchBox from '@/components/search/SearchBox';
 import { BagIcon } from '@/components/ui/Icons';
-import NotificationBell from './NotificationBell';
 import StorePicker from './StorePicker';
-import UserMenu from './UserMenu';
 
 function LogoMark() {
   return (
@@ -50,12 +47,8 @@ export default function AppHeader() {
           <LogoMark />
           <span className="hidden min-[380px]:inline">BrewLite</span>
         </Link>
-        <div className="hidden min-w-0 flex-1 md:block md:max-w-md lg:max-w-lg">
-          <SearchBox />
-        </div>
         <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
           <StorePicker />
-          <NotificationBell />
           <Link
             href="/checkout"
             data-cart-target
@@ -71,11 +64,7 @@ export default function AppHeader() {
               </span>
             )}
           </Link>
-          <UserMenu />
         </div>
-      </div>
-      <div className="mx-auto max-w-6xl px-4 pb-3 md:hidden">
-        <SearchBox />
       </div>
     </header>
   );
