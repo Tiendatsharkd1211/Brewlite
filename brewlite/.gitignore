@@ -10,3 +10,4 @@ backend/data/
 # Tệp do Next.js / TypeScript tự sinh
 next-env.d.ts
 *.tsbuildinfo
+/brewlite/
