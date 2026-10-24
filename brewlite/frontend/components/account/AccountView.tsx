@@ -22,6 +22,12 @@ import { LogoutIcon } from '@/components/ui/Icons';
 
 const TIER_STYLE = { Silver: 'bg-foam/20 text-foam', Gold: 'bg-gold text-roast', Platinum: 'bg-foam text-roast' } as const;
 
+/**
+ * Giao diện chi tiết tài khoản:
+ * - Thẻ thành viên, hạng và tiến trình tích điểm
+ * - Lịch sử giao dịch thanh toán và đơn hàng (hỗ trợ đặt lại, xem hóa đơn)
+ * - Đổi điểm lấy quà thưởng và lịch sử biến động điểm
+ */
 export default function AccountView() {
   const router = useRouter();
   const { user, request, setUser, logout } = useAuth();
@@ -36,6 +42,7 @@ export default function AccountView() {
   const tier = tierOf(user.points);
   const memberSince = new Date(user.createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' });
 
+  /** Đặt lại đơn hàng cũ: đưa toàn bộ món vào giỏ hàng và chuyển đến trang thanh toán */
   function reorder(order: Order) {
     addManyToCart(
       order.items.map((it) => ({
@@ -53,6 +60,7 @@ export default function AccountView() {
     router.push('/checkout');
   }
 
+  /** Đổi điểm lấy quà thưởng: gọi API POST /auth/redeem và cập nhật số điểm còn lại */
   async function redeem(rewardId: string, name: string) {
     setRedeeming(rewardId);
     try {
@@ -64,6 +72,7 @@ export default function AccountView() {
       setRedeeming(null);
     }
   }
+
 
   return (
     <>
