@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -26,18 +26,5 @@ export class OrdersController {
   @Get(':id')
   findOne(@CurrentUser() user: User, @Param('id') id: string) {
     return this.orders.findOne(user.id, id);
-  }
-
-  @Post(':id/cancel')
-  @HttpCode(200)
-  cancel(@CurrentUser() user: User, @Param('id') id: string) {
-    return this.orders.cancel(user.id, id);
-  }
-
-  /** Demo vai trò quầy: chuyển sang bước tiếp theo theo máy trạng thái */
-  @Post(':id/advance')
-  @HttpCode(200)
-  advance(@CurrentUser() user: User, @Param('id') id: string) {
-    return this.orders.advance(user.id, id);
   }
 }

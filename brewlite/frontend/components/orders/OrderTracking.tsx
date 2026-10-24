@@ -28,8 +28,6 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'ok' | 'missing' | 'error'>('loading');
   const [errorText, setErrorText] = useState('');
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -54,20 +52,6 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
   }, [order, load]);
-
-  /** Gọi API đổi trạng thái; máy trạng thái ở backend sẽ từ chối nếu không hợp lệ */
-  async function act(path: 'advance' | 'cancel') {
-    if (!order) return;
-    setBusy(true);
-    setActionError(null);
-    try {
-      setOrder(await request<Order>(`/orders/${encodeURIComponent(order.id)}/${path}`, { method: 'POST' }));
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Chưa cập nhật được đơn.');
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (loadState === 'loading') {
     return (
@@ -183,23 +167,6 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
           </ol>
         )}
 
-        {actionError && (
-          <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl bg-chili/10 px-4 py-3 text-sm text-chili">
-            <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" /> {actionError}
-          </p>
-        )}
-        <div className="mt-6 flex flex-wrap gap-3">
-          {unpaid && (
-            <button type="button" disabled={busy} onClick={() => act('cancel')} className="rounded-full border-2 border-chili/40 px-4 py-2 text-sm font-semibold text-chili hover:bg-chili/10 disabled:opacity-60">
-              Huỷ đơn
-            </button>
-          )}
-          {['PAID', 'PREPARING', 'READY'].includes(order.status) && (
-            <button type="button" disabled={busy} onClick={() => act('advance')} className="text-xs text-roast/50 underline underline-offset-4 disabled:opacity-60">
-              Demo (vai trò quầy): chuyển sang bước tiếp theo
-            </button>
-          )}
-        </div>
       </section>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
