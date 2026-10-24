@@ -61,9 +61,11 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 - Node.js bản LTS
 - Docker Desktop (đang chạy)
 
+> Mã nguồn nằm trong thư mục **`brewlite/`**, các lệnh bên dưới chạy từ thư mục gốc repo.
+
 ### Cách 1: Chạy một chạm trên Windows (khuyên dùng khi phát triển)
 
-Nhấp đúp vào `run-brewlite.bat`. Script sẽ tự động:
+Nhấp đúp vào `brewlite/run-brewlite.bat`. Script sẽ tự động:
 
 1. Khởi động PostgreSQL bằng Docker
 2. Cài đặt thư viện
@@ -73,26 +75,28 @@ Nhấp đúp vào `run-brewlite.bat`. Script sẽ tự động:
 ### Cách 2: Docker Compose (dùng khi bàn giao)
 
 ```bash
+cd brewlite
 docker compose up --build
 ```
 
-Hoặc nhấp đúp `run-docker.bat`, sau đó mở http://localhost:3000. Dừng hệ thống bằng `docker compose down` (thêm `-v` để xóa cả dữ liệu).
+Hoặc nhấp đúp `brewlite/run-docker.bat`, sau đó mở http://localhost:3000. Dừng hệ thống bằng `docker compose down` (thêm `-v` để xóa cả dữ liệu).
 
 ### Cách 3: Chạy thủ công (macOS / Linux / Windows)
 
 ```bash
 # 1. Khởi động cơ sở dữ liệu (cổng 5433)
+cd brewlite
 docker compose up -d db
 
 # 2. Backend
-cd backend
+cd backend                    # đang ở brewlite/backend
 cp .env.example .env          # Windows: copy .env.example .env
 npm install                   # tự chạy prisma generate
 npm run db:setup              # tạo bảng và nạp dữ liệu mẫu
 npm run start:dev             # http://localhost:3001/health
 
-# 3. Frontend (mở terminal thứ hai)
-cd frontend
+# 3. Frontend (mở terminal thứ hai, đứng ở thư mục gốc repo)
+cd brewlite/frontend
 cp .env.example .env.local
 npm install
 npm run dev                   # http://localhost:3000
@@ -184,7 +188,7 @@ PENDING / PAYMENT_FAILED / PAID ──► CANCELLED
 ## Kiểm thử
 
 ```bash
-cd backend
+cd brewlite/backend
 npm run test        # Unit test: máy trạng thái, luật khuyến mãi
 npm run test:int    # Integration test trên PostgreSQL thật (cần docker compose up -d db)
 ```
