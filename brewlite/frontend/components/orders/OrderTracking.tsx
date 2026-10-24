@@ -1,6 +1,11 @@
 'use client';
 
-// MÀN HÌNH THEO DÕI ĐƠN: trạng thái theo máy trạng thái của backend, mã đơn để nhận món, thông tin quán.
+/**
+ * MÀN HÌNH THEO DÕI ĐƠN HÀNG (Order Tracking)
+ * - Hiển thị trạng thái đơn theo thời gian thực dựa trên máy trạng thái (Order State Machine).
+ * - Cung cấp mã đơn để nhận món tại quầy hoặc theo dõi giao hàng.
+ * - Cho phép thanh toán lại VNPay, huỷ đơn, xem hoá đơn hoặc đặt lại đơn cũ.
+ */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -29,6 +34,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Tải thông tin chi tiết đơn hàng từ API backend
   const load = useCallback(async () => {
     try {
       setOrder(await request<Order>(`/orders/${encodeURIComponent(orderId)}`));
@@ -46,14 +52,14 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
     load();
   }, [load]);
 
-  // Đơn đang chạy thì cứ 5 giây hỏi lại trạng thái (quầy có thể đã cập nhật)
+  // Polling tự động: cứ mỗi 5 giây tải lại trạng thái nếu đơn đang xử lý (chưa COMPLETED hoặc CANCELLED)
   useEffect(() => {
     if (!order || ['COMPLETED', 'CANCELLED'].includes(order.status)) return;
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
   }, [order, load]);
 
-  /** Gọi API đổi trạng thái; máy trạng thái ở backend sẽ từ chối nếu không hợp lệ */
+  /** Gọi API chuyển trạng thái đơn (advance hoặc cancel). Backend sẽ chặn nếu vi phạm máy trạng thái */
   async function act(path: 'advance' | 'cancel') {
     if (!order) return;
     setBusy(true);
@@ -114,7 +120,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
     CANCELLED: 'Đơn đã huỷ, món đã được trả lại kho.',
   };
 
-  /** Đơn chưa trả xong: tạo link VNPay mới (khoá Idempotency-Key mới) rồi chuyển sang cổng VNPay */
+  /** Thanh toán lại qua VNPay: tạo link mới với Idempotency-Key ngẫu nhiên để chống giao dịch trùng */
   async function payVnpay() {
     if (!order) return;
     setBusy(true);
@@ -129,6 +135,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
     }
   }
 
+  /** Đặt lại đơn này: sao chép tất cả món và tuỳ chọn cũ vào giỏ hàng rồi chuyển đến trang thanh toán */
   function reorder() {
     if (!order) return;
     // Đặt lại đúng tuỳ chọn cũ; giá tạm tính lấy theo menu hiện tại, backend tính lại khi tạo đơn
@@ -161,7 +168,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
         </Link>
       </p>
 
-      {/* Trạng thái */}
+      {/* Tiến trình trạng thái đơn hàng */}
       <section className="mt-6 rounded-3xl bg-foam p-5 sm:p-7" aria-labelledby="progress-title">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="progress-title" className="text-xl font-extrabold">
@@ -173,6 +180,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
           {message[order.status]}
         </p>
 
+        {/* Thanh tiến trình 4 bước (Đặt đơn → Đang pha → Sẵn sàng / Đang giao → Hoàn thành) */}
         {stage >= 0 && (
           <ol className="relative mt-6 grid grid-cols-4">
             <span className="absolute left-[12.5%] right-[12.5%] top-[15px] h-1 rounded-full bg-roast/10" aria-hidden="true" />
@@ -203,6 +211,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
             <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" /> {actionError}
           </p>
         )}
+        {/* Các nút hành động: Thanh toán VNPay, Huỷ đơn, Demo quầy */}
         <div className="mt-6 flex flex-wrap gap-3">
           {unpaid && order.paymentMethod === 'VNPAY' && (
             <button type="button" disabled={busy} onClick={payVnpay} className="rounded-full bg-gold px-4 py-2 text-sm font-bold text-roast hover:bg-gold-deep hover:text-foam disabled:opacity-60">
@@ -222,7 +231,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
         </div>
       </section>
 
-      {/* Nhận món: đọc mã đơn tại quầy (BrewLite chỉ có một quán) */}
+      {/* Thông tin nhận món và mã đơn hàng */}
       <section className="mt-6 rounded-3xl bg-foam p-5 sm:p-6" aria-labelledby="pickup-title">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1 basis-64">
@@ -242,6 +251,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
                     : `Giao tới ${order.address}.`}
             </p>
           </div>
+          {/* Mã đơn hiển thị to rõ để khách đọc khi nhận đồ */}
           <p className={`rounded-2xl bg-cream px-4 py-3 text-center ${unpaid || order.status === 'CANCELLED' ? 'opacity-40' : ''}`}>
             <span className="block text-xs font-semibold text-roast/55">Mã đơn</span>
             <span className="block text-2xl font-extrabold tracking-wider tabular-nums text-espresso">{order.id}</span>
@@ -249,7 +259,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
         </div>
       </section>
 
-      {/* Món trong đơn */}
+      {/* Chi tiết các món và tổng tiền thanh toán */}
       <section className="mt-6 rounded-3xl bg-foam p-5 sm:p-6" aria-labelledby="items-title">
         <div className="flex items-baseline justify-between gap-3">
           <h2 id="items-title" className="font-extrabold">
