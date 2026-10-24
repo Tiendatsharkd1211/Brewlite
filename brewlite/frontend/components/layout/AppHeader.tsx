@@ -21,12 +21,13 @@ function LogoMark() {
   );
 }
 
+/** Thanh tiêu đề chính (Header) của ứng dụng: Logo, Tìm kiếm, Thông báo, Giỏ hàng và Tài khoản */
 export default function AppHeader() {
   const { cartCount, hydrated } = useAppStore();
   const [bump, setBump] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Giỏ hàng "nảy" lên mỗi khi có món bay vào
+  // Hiệu ứng giỏ hàng "nảy" (bump) khi có món được thêm từ menu
   useEffect(() => {
     const onBump = () => {
       setBump(false);
@@ -36,6 +37,7 @@ export default function AppHeader() {
     return () => window.removeEventListener(CART_BUMP_EVENT, onBump);
   }, []);
 
+  // Đổi hiệu ứng nền và bóng đổ khi người dùng cuộn trang xuống
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -46,19 +48,23 @@ export default function AppHeader() {
   return (
     <header className={`sticky top-0 z-40 border-b transition-[background-color,box-shadow,border-color] duration-300 ${scrolled ? 'border-roast/10 bg-cream/95 shadow-[0_8px_24px_-18px_rgba(59,42,32,.6)]' : 'border-transparent bg-cream'}`}>
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
+        {/* Logo BrewLite */}
         <Link href="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-espresso">
           <LogoMark />
           <span className="hidden min-[380px]:inline">BrewLite</span>
         </Link>
+        {/* Hộp tìm kiếm trên màn hình máy tính */}
         <div className="hidden min-w-0 flex-1 md:block md:max-w-md lg:max-w-lg">
           <SearchBox />
         </div>
         <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
-          {/* BrewLite chỉ có một quán nhận đơn: hiện tên quán, không cần chọn */}
+          {/* Thông tin địa chỉ quán */}
           <span className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-roast/70 lg:flex" title={STORE.address}>
             <PinIcon className="h-4 w-4" /> {STORE.shortName}
           </span>
+          {/* Chuông thông báo */}
           <NotificationBell />
+          {/* Nút giỏ hàng kèm số lượng món */}
           <Link
             href="/checkout"
             data-cart-target
@@ -74,9 +80,11 @@ export default function AppHeader() {
               </span>
             )}
           </Link>
+          {/* Menu người dùng / Đăng nhập */}
           <UserMenu />
         </div>
       </div>
+      {/* Hộp tìm kiếm trên màn hình điện thoại */}
       <div className="mx-auto max-w-6xl px-4 pb-3 md:hidden">
         <SearchBox />
       </div>
