@@ -1,6 +1,6 @@
 'use client';
 
-// Đăng nhập / đăng ký / đăng xuất. Token JWT lưu ở localStorage, gửi kèm mọi API cần đăng nhập.
+// Quản lý trạng thái xác thực người dùng. Token JWT được lưu tại localStorage và tự động đính kèm khi gọi API.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ApiError, apiRequest, type RequestOptions } from '@/lib/api';
 import type { User } from '@/lib/types';
@@ -24,7 +24,7 @@ interface AuthValue {
   logout: () => void;
   refresh: () => Promise<void>;
   setUser: (user: User) => void;
-  /** Gọi API có kèm token; hết phiên (401) thì tự đăng xuất */
+  /** Gọi API có kèm token; tự động logout nếu token hết hạn (401) */
   request: <T>(path: string, options?: Omit<RequestOptions, 'token'>) => Promise<T>;
 }
 
@@ -47,10 +47,12 @@ function writeToken(token: string | null) {
   }
 }
 
+/** Provider quản lý phiên đăng nhập, lưu token và xác thực thông tin tài khoản người dùng */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<Status>('loading');
+
 
   const logout = useCallback(() => {
     writeToken(null);
@@ -128,8 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/** Hook truy cập trạng thái xác thực và các thao tác tài khoản từ AuthContext */
 export function useAuth(): AuthValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth phải nằm trong <AuthProvider>');
   return ctx;
 }
+

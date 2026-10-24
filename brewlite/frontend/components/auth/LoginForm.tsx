@@ -11,6 +11,7 @@ import TextField from './TextField';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Form đăng nhập: kiểm tra tính hợp lệ dữ liệu nhập, gọi API đăng nhập và chuyển hướng sang URL `next` */
 export default function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const { login } = useAuth();
@@ -20,11 +21,13 @@ export default function LoginForm({ next }: { next: string }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Kiểm tra lỗi hợp lệ ở phía client trước khi gửi request
   const errors = {
     email: !email.trim() ? 'Nhập email' : !EMAIL_RE.test(email.trim()) ? 'Email chưa đúng định dạng, ví dụ ten@gmail.com' : null,
     password: !password ? 'Nhập mật khẩu' : null,
   };
 
+  /** Xử lý submit form đăng nhập và điều hướng sau khi thành công */
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setTouched({ email: true, password: true });
@@ -39,6 +42,7 @@ export default function LoginForm({ next }: { next: string }) {
       setSubmitting(false);
     }
   }
+
 
   return (
     <div className="rounded-[2rem] bg-foam p-6 shadow-[0_30px_60px_-40px_rgba(59,42,32,.6)] sm:p-8">

@@ -10,7 +10,9 @@ interface Props {
   placeholder?: string;
 }
 
+/** Ô nhập liệu văn bản/email: hiển thị label, border đổi màu theo trạng thái lỗi và thông báo lỗi */
 export default function TextField({ id, label, value, onChange, onBlur, error, type = 'text', autoComplete, placeholder }: Props) {
+
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-semibold">

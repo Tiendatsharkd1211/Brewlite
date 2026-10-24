@@ -1,8 +1,13 @@
 import type { ReactNode } from 'react';
 import { AUTH_IMAGE, photo } from '@/lib/images';
 
-/** Khung trang đăng nhập / đăng ký: ảnh lớn bên trái (desktop), biểu mẫu bên phải */
+/**
+ * Khung giao diện dùng chung cho các trang xác thực (Đăng nhập / Đăng ký):
+ * - Desktop: hiển thị ảnh bìa thương hiệu kèm thông điệp (quote) bên trái, form nhập liệu bên phải.
+ * - Mobile: căn giữa form nhập liệu trên màn hình nhỏ.
+ */
 export default function AuthShell({ children, quote }: { children: ReactNode; quote: string }) {
+
   return (
     <main className="mx-auto grid max-w-6xl gap-8 px-4 pb-28 pt-6 md:min-h-[calc(100dvh-5rem)] md:grid-cols-2 md:items-center md:pb-12">
       <div className="relative hidden h-full min-h-[560px] overflow-hidden rounded-[2rem] md:block">

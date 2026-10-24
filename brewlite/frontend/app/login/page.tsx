@@ -5,6 +5,7 @@ import { safeNext } from '@/lib/safe-next';
 
 export const metadata: Metadata = { title: 'Đăng nhập – BrewLite' };
 
+/** Trang đăng nhập: bọc form đăng nhập và xử lý URL chuyển hướng an toàn (next) */
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
   return (
@@ -13,3 +14,4 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     </AuthShell>
   );
 }
+

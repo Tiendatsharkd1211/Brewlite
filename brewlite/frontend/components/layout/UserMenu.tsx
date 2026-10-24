@@ -8,6 +8,7 @@ import { formatNumber } from '@/lib/format';
 import { tierOf } from '@/lib/pricing';
 import { LogoutIcon, ReceiptIcon, UserIcon, WalletIcon } from '@/components/ui/Icons';
 
+/** Trích xuất 1–2 chữ cái đầu của tên người dùng để hiển thị trên avatar */
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/);
   const picked = words.length > 1 ? [words[words.length - 2], words[words.length - 1]] : words;
@@ -17,10 +18,11 @@ export function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-/** Góc phải header: nút Đăng nhập khi chưa đăng nhập, avatar kèm menu khi đã đăng nhập */
+/** Menu tài khoản góc phải header: nút đăng nhập (khách) hoặc avatar dropdown xem điểm & quản lý tài khoản */
 export default function UserMenu() {
   const router = useRouter();
   const { status, user, logout } = useAuth();
+
   const [open, setOpen] = useState(false);
 
   if (status === 'loading') return <span className="skeleton hidden h-10 w-10 rounded-full md:block" aria-hidden="true" />;

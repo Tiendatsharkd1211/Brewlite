@@ -9,7 +9,7 @@ import QueryProvider from '@/components/layout/QueryProvider';
 import { ProductSheetProvider } from '@/components/product/ProductSheetProvider';
 import './globals.css';
 
-// Be Vietnam Pro: font thiết kế cho tiếng Việt, dấu không bị lệch ở cỡ chữ nhỏ
+// Cấu hình font Be Vietnam Pro tối ưu cho hiển thị tiếng Việt
 const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
   weight: ['400', '500', '600', '700', '800'],
@@ -27,6 +27,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/** Layout gốc của ứng dụng: bọc các Provider toàn cục (Query, Auth, Store, UI) và khung điều hướng */
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="vi" className={beVietnam.variable}>
@@ -46,3 +47,4 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     </html>
   );
 }
+

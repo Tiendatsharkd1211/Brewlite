@@ -21,8 +21,10 @@ function LogoMark() {
   );
 }
 
+/** Thanh điều hướng trên cùng: logo, tìm kiếm món, giỏ hàng có badge số lượng và menu tài khoản */
 export default function AppHeader() {
   const { cartCount, hydrated } = useAppStore();
+
   const [bump, setBump] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 

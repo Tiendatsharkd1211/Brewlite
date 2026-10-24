@@ -15,9 +15,10 @@ interface Props {
   hint?: ReactNode;
 }
 
-/** Ô mật khẩu có nút hiện / ẩn */
+/** Trường nhập mật khẩu: hỗ trợ bật/tắt hiển thị mật khẩu, thông báo lỗi validation và gợi ý */
 export default function PasswordField({ id, label, value, onChange, onBlur, error, autoComplete, placeholder, hint }: Props) {
   const [visible, setVisible] = useState(false);
+
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-semibold">

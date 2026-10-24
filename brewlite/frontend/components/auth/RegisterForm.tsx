@@ -11,7 +11,7 @@ import TextField from './TextField';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Độ mạnh mật khẩu 0–4: đủ 8 ký tự, có chữ và số, có hoa và thường, có ký tự đặc biệt */
+/** Tính điểm độ mạnh mật khẩu (0–4) dựa trên độ dài, chữ, số, chữ hoa/thường và ký tự đặc biệt */
 function strengthOf(pw: string) {
   const checks = [pw.length >= 8, /[A-Za-z]/.test(pw) && /\d/.test(pw), /[a-z]/.test(pw) && /[A-Z]/.test(pw), /[^A-Za-z0-9]/.test(pw)];
   const score = checks.filter(Boolean).length;
@@ -22,6 +22,7 @@ function strengthOf(pw: string) {
 
 type Field = 'fullName' | 'email' | 'password' | 'confirmPassword' | 'agree';
 
+/** Form tạo tài khoản: kiểm tra hợp lệ dữ liệu nhập, đo độ mạnh mật khẩu và gửi yêu cầu đăng ký */
 export default function RegisterForm({ next }: { next: string }) {
   const router = useRouter();
   const { register } = useAuth();
@@ -32,6 +33,7 @@ export default function RegisterForm({ next }: { next: string }) {
   const [submitting, setSubmitting] = useState(false);
 
   const strength = strengthOf(form.password);
+  // Kiểm tra lỗi hợp lệ cho từng trường ở phía client
   const errors: Record<Field, string | null> = {
     fullName: form.fullName.trim().length < 2 ? 'Nhập họ tên, ít nhất 2 ký tự' : null,
     email: !form.email.trim() ? 'Nhập email' : !EMAIL_RE.test(form.email.trim()) ? 'Email chưa đúng định dạng, ví dụ ten@gmail.com' : null,
@@ -44,7 +46,9 @@ export default function RegisterForm({ next }: { next: string }) {
   const touch = (key: Field) => () => setTouched((t) => ({ ...t, [key]: true }));
   const show = (key: Field) => (touched[key] ? errors[key] : null);
 
+  /** Xử lý submit đăng ký tài khoản và chuyển hướng về URL `next` */
   async function onSubmit(e: FormEvent) {
+
     e.preventDefault();
     setTouched({ fullName: true, email: true, password: true, confirmPassword: true, agree: true });
     if (Object.values(errors).some(Boolean)) return;

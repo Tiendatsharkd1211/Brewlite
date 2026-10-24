@@ -7,7 +7,12 @@ import { useAuth } from '@/context/auth-context';
 import Skeleton from '@/components/ui/Skeleton';
 import { LockIcon } from '@/components/ui/Icons';
 
-/** Bọc nội dung cần đăng nhập: chưa đăng nhập thì hiện lời mời đăng nhập thay vì trang trống */
+/**
+ * Component bảo vệ nội dung yêu cầu đăng nhập:
+ * - Khi đang kiểm tra trạng thái (`loading`): hiển thị khung xương skeleton.
+ * - Khi chưa đăng nhập (`guest`): hiển thị lời mời đăng nhập kèm link chuyển tiếp `next`.
+ * - Khi đã đăng nhập (`authenticated`): render nội dung `children`.
+ */
 export default function AuthGate({ children, title, description }: { children: ReactNode; title: string; description: string }) {
   const { status } = useAuth();
   const pathname = usePathname();
@@ -22,8 +27,9 @@ export default function AuthGate({ children, title, description }: { children: R
   }
 
   if (status === 'guest') {
-    // Giữ cả chuỗi ?... (ví dụ kết quả VNPay trả về) để đăng nhập xong quay lại đúng trang
+    // Lưu URL hiện tại (kèm query searchParams) vào param next để quay lại sau khi đăng nhập
     const next = encodeURIComponent(pathname + (typeof window !== 'undefined' ? window.location.search : ''));
+
     return (
       <div className="mx-auto mt-8 max-w-md animate-rise rounded-[2rem] bg-foam px-6 py-10 text-center">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-cream text-espresso">
