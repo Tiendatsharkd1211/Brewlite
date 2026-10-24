@@ -8,11 +8,11 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { assertTransition, HAPPY_PATH_NEXT, OrderStatus } from './order-state-machine';
 import { DELIVERY_FEE, SIZE_EXTRA } from './pricing';
 
-/** Số lần thử lại khi đụng độ phiên bản tồn kho (optimistic locking) */
+/** Thử lại tối đa 8 lần khi đụng độ phiên bản tồn kho (optimistic locking) */
 const MAX_ATTEMPTS = 8;
 export const TX_OPTIONS = { maxWait: 10_000, timeout: 15_000 };
 
-/** Có người khác vừa trừ kho cùng sản phẩm trước mình: cần thử lại cả transaction */
+/** Có request khác vừa trừ kho món này trước: kích hoạt retry cả transaction */
 export class StockVersionConflict extends Error {
   constructor(public readonly productId: string) {
     super(`Phiên bản tồn kho của ${productId} đã thay đổi`);
@@ -30,14 +30,11 @@ export class OrdersService {
   ) {}
 
   /**
-   * Tạo đơn PENDING và GIỮ CHỖ tồn kho (Task 6 + Task 10.3).
-   *
-   * Kiểm soát tồn kho khi nhiều khách đặt cùng lúc = Transaction + Optimistic Locking:
-   *  1. Đọc sản phẩm kèm cột `version`.
-   *  2. UPDATE ... SET stock = stock - qty, version = version + 1 WHERE id = ? AND version = <version vừa đọc>.
-   *  3. Nếu UPDATE ảnh hưởng 0 dòng => có người khác vừa trừ kho trước => huỷ transaction (rollback) và THỬ LẠI từ đầu.
-   *  4. Nếu kho không đủ => báo 409, không thử lại.
-   * Nhờ vậy dù 100 người bấm cùng lúc, tổng số đã bán không bao giờ vượt `stock`.
+   * Tạo đơn PENDING và giữ chỗ tồn kho (Task 6 + 10.3).
+   * Cơ chế chống bán vượt tồn kho (Over-selling):
+   * - Dùng Transaction + Optimistic Locking (cột version).
+   * - Nếu đụng độ version, thử lại tối đa 8 lần kèm lùi ngẫu nhiên (jitter backoff).
+   * - Nếu kho thực sự không đủ thì ném 409 ngay, không thử lại.
    */
   async create(userId: string, dto: CreateOrderDto) {
     for (let attempt = 1; ; attempt++) {
@@ -46,7 +43,7 @@ export class OrdersService {
       } catch (err) {
         const retryable = err instanceof StockVersionConflict || isUniqueViolation(err);
         if (retryable && attempt < MAX_ATTEMPTS) {
-          await sleep(5 + Math.random() * 20 * attempt); // lùi ngẫu nhiên để các request không đụng nhau mãi
+          await sleep(5 + Math.random() * 20 * attempt); // lùi ngẫu nhiên để các request tránh đụng nhau tiếp
           continue;
         }
         if (err instanceof StockVersionConflict) {
@@ -62,7 +59,7 @@ export class OrdersService {
     const products = await tx.product.findMany({ where: { id: { in: ids } }, include: { toppings: true } });
     const byId = new Map(products.map((p) => [p.id, p]));
 
-    // 1. Tính tiền từng dòng theo giá trong CSDL
+    // 1. Tính giá từng món theo dữ liệu trong CSDL (chống giả mạo giá từ client)
     const needed = new Map<string, number>();
     let subtotal = 0;
     const items = dto.items.map((item) => {
@@ -94,7 +91,7 @@ export class OrdersService {
       };
     });
 
-    // 2. Trừ kho có kiểm tra phiên bản. Sắp xếp theo id để 2 đơn luôn khoá dòng cùng thứ tự (tránh deadlock).
+    // 2. Trừ kho bằng Optimistic Locking. Sắp xếp theo productId (.sort()) để tránh DEADLOCK giữa các transaction.
     for (const productId of [...needed.keys()].sort()) {
       const product = byId.get(productId)!;
       const qty = needed.get(productId)!;
@@ -103,6 +100,7 @@ export class OrdersService {
           product.stock === 0 ? `${product.name} đã hết hàng` : `${product.name} chỉ còn ${product.stock} phần, không đủ ${qty} phần bạn đặt`,
         );
       }
+      // Chỉ trừ kho khi version chưa bị request khác thay đổi
       const res = await tx.product.updateMany({
         where: { id: productId, version: product.version },
         data: { stock: { decrement: qty }, version: { increment: 1 } },
@@ -110,7 +108,7 @@ export class OrdersService {
       if (res.count === 0) throw new StockVersionConflict(productId);
     }
 
-    // 3. Khuyến mãi và phí giao hàng (Task 10.4)
+    // 3. Áp dụng voucher khuyến mãi và tính phí giao hàng
     if (dto.fulfillment === 'DELIVERY' && (dto.address ?? '').trim().length < 8) {
       throw new BadRequestException('Nhập địa chỉ giao hàng đầy đủ');
     }
@@ -138,7 +136,7 @@ export class OrdersService {
     });
   }
 
-  /** GET /orders/me: lịch sử đơn của tài khoản (Task 9) */
+  /** GET /orders/me: Lịch sử đơn hàng của user, mới nhất lên đầu */
   findMine(userId: string) {
     return this.prisma.order.findMany({ where: { userId }, include: ORDER_INCLUDE, orderBy: { createdAt: 'desc' } });
   }
@@ -149,7 +147,7 @@ export class OrdersService {
     return order;
   }
 
-  /** Khách huỷ đơn chưa thanh toán: chuyển CANCELLED và hoàn lại tồn kho đã giữ */
+  /** Khách huỷ đơn chưa thanh toán: chuyển CANCELLED và hoàn lại số lượng tồn kho (restock) */
   async cancel(userId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findFirst({ where: { id, userId }, include: ORDER_INCLUDE });
@@ -158,8 +156,9 @@ export class OrdersService {
         throw new ConflictException('Đơn đã thanh toán hoặc đã kết thúc, vui lòng liên hệ quầy để huỷ');
       }
       await moveOrderStatus(tx, order.id, order.status, 'CANCELLED');
-      // Link VNPay đang chờ của đơn này không dùng nữa (nếu khách vẫn trả thì giao dịch được ghi "cần hoàn tiền")
       await tx.payment.updateMany({ where: { orderId: order.id, status: 'PROCESSING' }, data: { status: 'FAILED', failureReason: 'Đơn đã bị huỷ' } });
+
+      // Hoàn lại tồn kho cho các món đã giữ
       const restock = new Map<string, number>();
       for (const item of order.items) restock.set(item.productId, (restock.get(item.productId) ?? 0) + item.qty);
       for (const productId of [...restock.keys()].sort()) {
@@ -172,7 +171,7 @@ export class OrdersService {
     }, TX_OPTIONS);
   }
 
-  /** Quầy chuyển đơn sang bước tiếp theo: PAID → PREPARING → READY → COMPLETED (dùng khi demo) */
+  /** Quầy chuyển đơn sang bước tiếp theo: PAID → PREPARING → READY → COMPLETED */
   async advance(userId: string, id: string) {
     const order = await this.findOne(userId, id);
     const next = HAPPY_PATH_NEXT[order.status as OrderStatus];
@@ -183,9 +182,9 @@ export class OrdersService {
 }
 
 /**
- * Đổi trạng thái đơn an toàn:
- *  - assertTransition chặn chuyển tiếp không hợp lệ theo máy trạng thái;
- *  - UPDATE có điều kiện "status vẫn là trạng thái cũ" (compare-and-set) để 2 request đồng thời không cùng đổi.
+ * Đổi trạng thái đơn an toàn (Atomic State Transition):
+ * 1. assertTransition: Chặn chuyển trạng thái sai quy tắc.
+ * 2. Compare-and-set: updateMany kèm điều kiện `status: from` để tránh race condition khi 2 request cùng đổi status.
  */
 export async function moveOrderStatus(
   db: Prisma.TransactionClient | PrismaService,
