@@ -10,11 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-<<<<<<< HEAD
-        working-directory: backend
-=======
         working-directory: brewlite/backend
->>>>>>> 9743307f3f271670b136d791f593dda74af30d0c
     services:
       db:
         image: postgres:16
@@ -44,11 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-<<<<<<< HEAD
-        working-directory: frontend
-=======
         working-directory: brewlite/frontend
->>>>>>> 9743307f3f271670b136d791f593dda74af30d0c
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
