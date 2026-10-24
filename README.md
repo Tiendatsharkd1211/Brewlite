@@ -32,7 +32,7 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 
 ## Giới thiệu
 
-**BrewLite** là ứng dụng web giúp khách hàng đặt đồ uống và thanh toán hoàn toàn không dùng tiền mặt. Khách có thể xem thực đơn, tùy chỉnh món theo ý thích, quản lý giỏ hàng, thanh toán qua ví điện tử, VietQR, thẻ hoặc điểm thưởng, rồi theo dõi trạng thái đơn hàng.
+**BrewLite** là ứng dụng web giúp khách hàng đặt đồ uống và thanh toán hoàn toàn không dùng tiền mặt. Khách có thể xem thực đơn, tùy chỉnh món theo ý thích, quản lý giỏ hàng, thanh toán qua cổng VNPay (sandbox) hoặc điểm thưởng, rồi theo dõi trạng thái đơn hàng.
 
 ## Tính năng chính
 
@@ -40,7 +40,7 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 - 🎛️ **Tùy chỉnh món**: chọn size S/M/L, mức đường, mức đá, topping; giá tự tính lại.
 - 🛒 **Giỏ hàng**: thêm, sửa, xóa món; tổng tiền cập nhật tức thì, giữ nguyên khi tải lại trang.
 - 🔐 **Tài khoản**: đăng ký, đăng nhập bằng JWT; chức năng đặt đơn được bảo vệ.
-- 💳 **Thanh toán không tiền mặt**: MoMo, ZaloPay, ShopeePay, VNPay, VietQR, thẻ (cổng giả lập), hỗ trợ thanh toán lại khi thất bại.
+- 💳 **Thanh toán không tiền mặt**: cổng VNPay (môi trường thử sandbox) hoặc điểm BrewLite, hỗ trợ thanh toán lại khi thất bại.
 - 🎁 **Khuyến mãi và điểm thưởng**: áp mã giảm giá, tích điểm khi thanh toán thành công, đổi điểm lấy quà.
 - 📦 **Theo dõi đơn hàng**: cập nhật trạng thái từ lúc đặt đến khi hoàn thành.
 
@@ -51,7 +51,7 @@ Bài tập lớn môn Công nghệ Phần mềm · Học kỳ I, năm học 2026
 | **Frontend** | Next.js 15 (React, TypeScript), TailwindCSS 4, Zustand (giỏ hàng), React Query (gọi API) |
 | **Backend** | NestJS 11 (REST API), class-validator, JWT + Passport, bcrypt (`bcryptjs`) |
 | **Cơ sở dữ liệu** | PostgreSQL 16, Prisma ORM |
-| **Thanh toán** | Mock Payment Service mô phỏng MoMo, ZaloPay, ShopeePay, VNPay, VietQR, thẻ |
+| **Thanh toán** | VNPay sandbox (cổng thanh toán thử của VNPay) + điểm BrewLite |
 | **DevOps** | Docker, Docker Compose (frontend + backend + PostgreSQL) |
 
 ## Cài đặt và chạy dự án
@@ -391,7 +391,7 @@ brewlite/
 │   │   ├── auth/               # Đăng ký, đăng nhập, JWT Passport
 │   │   ├── products/           # API sản phẩm
 │   │   ├── orders/             # Tạo đơn, máy trạng thái, tồn kho
-│   │   ├── payments/           # Thanh toán idempotent, cổng giả lập
+│   │   ├── payments/           # Thanh toán idempotent qua VNPay
 │   │   ├── promotions/         # Mã giảm giá, điểm thưởng
 │   │   └── seed.ts             # Dữ liệu mẫu
 │   └── test/                   # Integration test (PostgreSQL thật)
