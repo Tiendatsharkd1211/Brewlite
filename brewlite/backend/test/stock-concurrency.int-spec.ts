@@ -3,7 +3,11 @@ import { randomUUID } from 'crypto';
 import { InvalidOrderTransitionException } from '../src/orders/order-state-machine';
 import { createFixture, createServices, orderDto, payByVnpay, vnpayCallback } from './helpers';
 
-// Task 10 – tiêu chí (c): đặt đồng thời không vượt tồn kho; và (a) ở mức CSDL: chặn chuyển trạng thái sai
+/**
+ * Kiểm thử tích hợp (Integration Test) trên PostgreSQL thật:
+ * 1. Kiểm soát tồn kho khi nhiều khách đặt đồng thời (Concurrency - chống bán âm/vượt tồn kho).
+ * 2. Thực thi máy trạng thái đơn hàng (Order State Machine) ở tầng CSDL.
+ */
 describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL thật)', () => {
   let s: Awaited<ReturnType<typeof createServices>>;
 
@@ -14,6 +18,7 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     await s.prisma.$disconnect();
   });
 
+  // Test 1: Đặt 12 đơn đồng thời vào món chỉ còn 5 phần -> đúng 5 đơn thành công, 7 đơn bị từ chối (409), kho về 0 (không âm)
   it('kho còn 5, 12 khách đặt cùng lúc mỗi người 1 phần: đúng 5 đơn thành công, kho về 0, không âm', async () => {
     const fx = await createFixture(s.prisma, 5);
     try {
@@ -34,6 +39,7 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     }
   });
 
+  // Test 2: Mỗi đơn đặt nhiều phần (3 phần/đơn, kho 10) -> tối đa 3 đơn thành công (= 9 phần), còn dư 1 trong kho, không vượt tồn
   it('đặt nhiều phần cùng lúc (mỗi đơn 3 phần, kho 10): tổng đã bán không vượt 10', async () => {
     const fx = await createFixture(s.prisma, 10);
     try {
@@ -47,6 +53,7 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     }
   });
 
+  // Test 3: Huỷ đơn chưa thanh toán -> hoàn lại số lượng tồn kho (restock) về CSDL
   it('huỷ đơn chưa thanh toán thì hoàn lại tồn kho', async () => {
     const fx = await createFixture(s.prisma, 3);
     try {
@@ -60,6 +67,7 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     }
   });
 
+  // Test 4: Chặn chuyển trạng thái sai trên đơn thật (PENDING không thể advance, đơn huỷ không thể thanh toán, đơn PAID không tự huỷ)
   it('chặn chuyển trạng thái sai trên đơn thật: PENDING không thể "pha chế", đơn đã huỷ không thể thanh toán', async () => {
     const fx = await createFixture(s.prisma, 5);
     try {
@@ -83,6 +91,7 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     }
   });
 
+  // Test 5: Huỷ đơn khi đang có link thanh toán VNPay -> link đổi sang FAILED; nếu khách vẫn trả tiền qua VNPay thì đánh dấu NEEDS_REFUND
   it('huỷ đơn khi đang có link VNPay: link FAILED; nếu VNPay vẫn báo đã trừ tiền thì ghi "cần hoàn tiền", đơn vẫn CANCELLED', async () => {
     const fx = await createFixture(s.prisma, 5);
     try {
@@ -100,6 +109,7 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     }
   });
 
+  // Test 6: Ngoại lệ InvalidOrderTransitionException phải trả về đúng mã HTTP 409 Conflict
   it('assertTransition ném đúng loại lỗi', () => {
     expect(new InvalidOrderTransitionException('PENDING', 'COMPLETED').getStatus()).toBe(409);
   });
