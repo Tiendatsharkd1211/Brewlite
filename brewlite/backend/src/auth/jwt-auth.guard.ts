@@ -1,9 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
-/** Gắn @UseGuards(JwtAuthGuard) lên route cần đăng nhập (dùng JwtStrategy của Passport) */
+/**
+ * Guard bảo vệ các route yêu cầu đăng nhập bằng JWT.
+ */
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+  /** Xử lý kết quả xác thực: ném lỗi tiếng Việt nếu chưa đăng nhập hoặc token hết hạn */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleRequest(err: any, user: any) {
     if (err || !user) {
@@ -12,3 +15,5 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return user;
   }
 }
+
+

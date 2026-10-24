@@ -8,9 +8,11 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { REWARDS } from './rewards';
 
+/** Số điểm tặng khi đăng ký tài khoản mới */
 export const WELCOME_POINTS = 1250;
 const BCRYPT_ROUNDS = 10;
 
+/** Service xử lý logic xác thực, phân quyền và quản lý tài khoản */
 @Injectable()
 export class AuthService {
   constructor(
@@ -18,6 +20,7 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  /** Đăng ký tài khoản: hash mật khẩu, tặng điểm chào mừng và khởi tạo phiên đăng nhập */
   async register(dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) throw new BadRequestException('Mật khẩu xác nhận không khớp');
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -38,6 +41,7 @@ export class AuthService {
     }
   }
 
+  /** Đăng nhập: kiểm tra email & mật khẩu bằng bcrypt, trả về JWT và profile */
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     // Cùng một thông báo cho "sai email" và "sai mật khẩu" để không lộ email nào đã đăng ký
@@ -47,7 +51,7 @@ export class AuthService {
     return this.session(user);
   }
 
-  /** Thông tin tài khoản trả về client: không bao giờ kèm passwordHash */
+  /** Lấy thông tin tài khoản và 30 giao dịch điểm gần nhất (không kèm passwordHash) */
   async profile(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
@@ -63,7 +67,7 @@ export class AuthService {
     };
   }
 
-  /** Đổi điểm lấy quà. Trừ điểm có điều kiện "còn đủ điểm" ngay trong câu UPDATE nên bấm liên tục cũng không âm điểm. */
+  /** Đổi điểm lấy quà: trừ điểm bằng transaction có điều kiện (gte) để tránh âm điểm khi spam */
   async redeem(userId: string, rewardId: string) {
     const reward = REWARDS.find((r) => r.id === rewardId);
     if (!reward) throw new BadRequestException('Quà không tồn tại');
@@ -78,8 +82,10 @@ export class AuthService {
     return this.profile(userId);
   }
 
+  /** Tạo JWT access token và trả kèm thông tin profile của user */
   private async session(user: User) {
     const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
     return { accessToken, user: await this.profile(user.id) };
   }
 }
+
