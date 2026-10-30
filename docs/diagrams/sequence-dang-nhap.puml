@@ -1,0 +1,72 @@
+@startuml sequence-dang-nhap
+!include style.iuml
+title Sơ đồ tuần tự 04: Đăng nhập & gọi API có bảo vệ (JWT)
+autonumber
+
+actor "Khách hàng" as KH
+boundary "Giao diện Đăng nhập\n(LoginForm)" as UI
+control "AuthContext" as AC
+control "AuthController" as C
+control "AuthService" as S
+control "JwtAuthGuard /\nJwtStrategy" as G
+database "PostgreSQL" as DB
+
+KH -> UI : Nhập email, mật khẩu, bấm "Đăng nhập"
+activate UI
+UI -> UI : Kiểm tra phía client: email đúng định dạng,\nmật khẩu không để trống
+alt Client báo lỗi (chưa gửi request)
+  UI --> KH : Hiển thị lỗi ngay dưới ô nhập
+else Hợp lệ
+  UI -> AC : login(email, password)
+  activate AC
+  AC -> C : POST /auth/login
+  activate C
+  C -> C : ValidationPipe kiểm tra LoginDto\n(email trim + lowercase)
+  C -> S : login(dto)
+  activate S
+  S -> DB : SELECT User WHERE email = ?
+  activate DB
+  DB --> S : User hoặc null
+  deactivate DB
+  alt Không có User hoặc bcrypt.compare sai
+    S --> C : 401 "Email hoặc mật khẩu không đúng"
+    C --> AC : 401
+    AC --> UI : ApiError
+    UI --> KH : Hiển thị lỗi trong banner đầu form
+  else Đúng
+    S -> S : jwt.signAsync({sub, email}) – hạn 7 ngày
+    S -> DB : SELECT User + 30 giao dịch điểm gần nhất\n(không kèm passwordHash)
+    activate DB
+    DB --> S : profile
+    deactivate DB
+    S --> C : {accessToken, user}
+    deactivate S
+    C --> AC : 200 {accessToken, user}
+    deactivate C
+    AC -> AC : Lưu "brewlite.token" vào localStorage,\nsetUser, status = authed
+    AC --> UI : user
+    deactivate AC
+    UI --> KH : Chuyển về trang "next"\n(vd. /checkout)
+  end
+end
+deactivate UI
+
+== Mở trang có token đã lưu, hoặc gọi API có bảo vệ (vd. GET /auth/me) ==
+AC -> G : Request kèm header\nAuthorization: Bearer <token>
+activate G
+G -> G : Kiểm chữ ký và hạn token
+G -> DB : SELECT User WHERE id = payload.sub
+activate DB
+DB --> G : User hoặc null
+deactivate DB
+alt Token sai / hết hạn / User không còn
+  G --> AC : 401 "Bạn cần đăng nhập, hoặc phiên đăng nhập đã hết hạn"
+  AC -> AC : logout(): xóa token, status = guest
+else Hợp lệ
+  G -> C : request.user = User
+  activate C
+  C --> AC : 200 dữ liệu
+  deactivate C
+end
+deactivate G
+@enduml

@@ -1,0 +1,67 @@
+@startuml sequence-dang-ky
+!include style.iuml
+title Sơ đồ tuần tự 03: Đăng ký tài khoản
+autonumber
+
+actor "Khách vãng lai" as KH
+boundary "Giao diện Đăng ký\n(RegisterForm)" as UI
+control "AuthContext" as AC
+control "AuthController" as C
+control "AuthService" as S
+database "PostgreSQL" as DB
+
+KH -> UI : Nhập họ tên, email, mật khẩu,\nxác nhận mật khẩu, tick điều khoản, bấm "Tạo tài khoản"
+activate UI
+UI -> UI : Kiểm tra phía client: họ tên ≥ 2 ký tự,\nemail đúng định dạng, mật khẩu ≥ 8 có chữ và số,\nxác nhận khớp, đã đồng ý điều khoản
+alt Client báo lỗi (chưa gửi request)
+  UI --> KH : Hiển thị lỗi ngay dưới từng ô nhập
+else Hợp lệ
+  UI -> AC : register(input)
+  activate AC
+  AC -> C : POST /auth/register
+  activate C
+  C -> C : ValidationPipe kiểm tra RegisterDto\n(họ tên 2–60, email, mật khẩu 8–64 có chữ và số)
+  alt Server từ chối dữ liệu
+    C --> AC : 400 + câu báo lỗi
+    AC --> UI : ApiError
+    UI --> KH : Hiển thị lỗi trong banner đầu form
+  else Hợp lệ
+    C -> S : register(dto)
+    activate S
+    alt Mật khẩu xác nhận không khớp
+      S --> C : 400 "Mật khẩu xác nhận không khớp"
+      C --> AC : 400
+      AC --> UI : ApiError
+      UI --> KH : Hiển thị lỗi trong banner đầu form
+    else Khớp
+      S -> S : bcrypt.hash(password, 10)
+      S -> DB : INSERT User (loyaltyPoints = 1250)\n+ LoyaltyTransaction +1250 "Quà chào mừng thành viên mới"
+      activate DB
+      alt Email đã tồn tại (P2002)
+        DB --> S : Lỗi UNIQUE
+        S --> C : 409 "Email này đã được dùng để đăng ký"
+        C --> AC : 409
+        AC --> UI : ApiError
+        UI --> KH : Hiển thị lỗi trong banner đầu form
+      else Thành công
+        DB --> S : User mới
+        deactivate DB
+        S -> S : jwt.signAsync({sub, email}) – hạn 7 ngày
+        S -> DB : SELECT User + 30 giao dịch điểm gần nhất\n(không kèm passwordHash)
+        activate DB
+        DB --> S : profile
+        deactivate DB
+        S --> C : {accessToken, user}
+        deactivate S
+        C --> AC : 201 {accessToken, user}
+        deactivate C
+        AC -> AC : Lưu "brewlite.token" vào localStorage,\nsetUser, status = authed
+        AC --> UI : user
+        deactivate AC
+        UI --> KH : Chuyển về trang "next" (mặc định: trang chủ)
+      end
+    end
+  end
+end
+deactivate UI
+@enduml
