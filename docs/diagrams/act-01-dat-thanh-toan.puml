@@ -1,0 +1,104 @@
+@startuml act-01-dat-thanh-toan
+!include style.iuml
+title Activity-01: Luồng end-to-end Xem menu → Giỏ hàng → Đặt đơn → Thanh toán → Theo dõi
+
+|Khách hàng|
+start
+:Mở BrewLite (trình duyệt / PWA);
+|Next.js UI|
+:Gọi GET /products, hiện skeleton;
+|NestJS API|
+:Đọc thực đơn từ PostgreSQL;
+|Next.js UI|
+if (Tải được thực đơn?) then (không)
+  :Hiện lỗi + nút "Thử lại";
+  stop
+else (có)
+endif
+|Khách hàng|
+:Chọn món, size, đường, đá, topping;
+|Next.js UI|
+if (Món còn hàng?) then (hết)
+  :Khóa nút thêm\n("Tạm hết hàng");
+  |Khách hàng|
+  :Chọn món khác;
+else (còn)
+endif
+|Next.js UI|
+:Thêm vào giỏ (Zustand + localStorage),
+tính tổng tiền, tăng badge;
+|Khách hàng|
+:Mở giỏ, chọn hình thức nhận,
+phương thức (VNPay / điểm), mã giảm giá;
+:Bấm "Thanh toán ngay";
+|Next.js UI|
+if (Đã đăng nhập (có JWT)?) then (chưa)
+  :Chuyển tới /login?next=/checkout;
+  |Khách hàng|
+  :Đăng nhập;
+  |Next.js UI|
+  :Quay lại trang thanh toán;
+else (rồi)
+endif
+:POST /orders (chỉ gửi lựa chọn, không gửi giá);
+|NestJS API|
+:Kiểm tra JWT + validate DTO;
+:Transaction: tính lại giá, trừ kho
+(optimistic locking), áp mã, tạo đơn PENDING;
+if (Đủ tồn kho?) then (không)
+  :Rollback, trả 409 "đã hết hàng";
+  |Next.js UI|
+  :Báo hết hàng, giữ nguyên giỏ;
+  stop
+else (có)
+endif
+|Next.js UI|
+:POST /payments + Idempotency-Key;
+|NestJS API|
+:Tạo Payment PROCESSING,
+ký link VNPay (HMAC-SHA512);
+|Next.js UI|
+:Chuyển trình duyệt sang VNPay;
+|Cổng VNPay|
+:Khách nhập thẻ test, OTP;
+if (Thanh toán thành công?) then (có)
+  :Trả vnp_ResponseCode = 00;
+else (không / khách hủy)
+  :Trả mã lỗi (vd. 24);
+endif
+:Chuyển về /payment/vnpay-return
+(+ gọi IPN tới máy chủ);
+|NestJS API|
+if (Chữ ký và số tiền hợp lệ?) then (không)
+  :Từ chối, không ghi nhận;
+  |Next.js UI|
+  :Báo "chữ ký không hợp lệ";
+  stop
+else (có)
+endif
+|NestJS API|
+:applyResult(): khóa dòng đơn, ghi 1 lần;
+if (VNPay báo thành công?) then (có)
+  |NestJS API|
+  :Đơn → PAID, cộng điểm,
+  tăng lượt dùng mã;
+  |Next.js UI|
+  :Xóa giỏ, hiện mã đơn,
+  mã giao dịch VNPay;
+  |Khách hàng|
+  :Theo dõi đơn (tự cập nhật 5 giây);
+  |Nhân viên quầy|
+  :PAID → PREPARING → READY → COMPLETED;
+  |Khách hàng|
+  :Đến quầy An Dương Vương đọc mã đơn, nhận món;
+  stop
+else (không)
+  |NestJS API|
+  :Đơn → PAYMENT_FAILED,
+  Payment → FAILED (không trừ tiền);
+  |Next.js UI|
+  :Báo lỗi, giữ nguyên giỏ,
+  nút "Thanh toán lại" / "Hủy đơn";
+  stop
+endif
+@enduml

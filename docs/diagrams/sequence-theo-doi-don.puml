@@ -1,0 +1,74 @@
+@startuml sequence-theo-doi-don
+!include style.iuml
+title Sơ đồ tuần tự 07: Lịch sử đơn & Theo dõi trạng thái (polling 5 giây)
+autonumber
+
+actor "Khách hàng" as KH
+boundary "Giao diện Đơn hàng\n(OrdersList)" as UL
+boundary "Giao diện Theo dõi đơn\n(OrderTracking)" as UT
+control "OrdersController" as C
+control "OrdersService" as S
+database "PostgreSQL" as DB
+
+KH -> UL : Mở trang "Đơn hàng"
+activate UL
+UL -> C : GET /orders/me (Bearer token)
+activate C
+C -> S : findMine(userId)
+activate S
+S -> DB : SELECT Order + OrderItem\nWHERE userId = ? ORDER BY createdAt DESC
+activate DB
+DB --> S : Danh sách đơn
+deactivate DB
+S --> C : Order[]
+deactivate S
+C --> UL : 200 Order[]
+deactivate C
+alt Lỗi
+  UL --> KH : Thông báo lỗi + nút "Thử lại"
+else Không có đơn
+  UL --> KH : Trạng thái trống
+else Có đơn
+  UL --> KH : Danh sách: mã đơn, ngày, tổng tiền, trạng thái
+end
+KH -> UL : Chọn một đơn
+UL -> UT : Mở /orders/:id
+deactivate UL
+activate UT
+UT -> C : GET /orders/:id
+activate C
+C -> S : findOne(userId, id)
+activate S
+S -> DB : SELECT Order WHERE id = ? AND userId = ?
+activate DB
+DB --> S : Order hoặc null
+deactivate DB
+alt Không thuộc tài khoản
+  S --> C : 404
+  C --> UT : 404
+  UT --> KH : "Không tìm thấy đơn"
+else Có
+  S --> C : Order
+  deactivate S
+  C --> UT : 200 Order
+  deactivate C
+  UT --> KH : Tiến trình trạng thái, mã đơn để đọc tại quầy\nAn Dương Vương, món
+  loop Mỗi 5 giây khi trạng thái chưa COMPLETED / CANCELLED
+    UT -> C : GET /orders/:id
+    activate C
+    C -> S : findOne(userId, id)
+    activate S
+    S -> DB : SELECT Order
+    activate DB
+    DB --> S : Order
+    deactivate DB
+    S --> C : Order
+    deactivate S
+    C --> UT : 200 Order
+    deactivate C
+    UT --> KH : Cập nhật tiến trình
+  end
+  UT -> UT : clearInterval (dừng polling)
+end
+deactivate UT
+@enduml
