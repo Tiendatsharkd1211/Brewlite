@@ -1,0 +1,53 @@
+@startuml sequence-huy-don
+!include style.iuml
+title Sơ đồ tuần tự 08: Hủy đơn chưa thanh toán & Hoàn tồn kho
+autonumber
+
+actor "Khách hàng" as KH
+boundary "Giao diện Theo dõi đơn /\nThanh toán" as UI
+control "OrdersController" as C
+control "OrdersService" as S
+control "OrderStateMachine\n(assertTransition)" as SM
+database "PostgreSQL" as DB
+
+KH -> UI : Bấm "Hủy đơn" (hoặc bỏ thanh toán dở)
+activate UI
+UI -> C : POST /orders/:id/cancel (Bearer token)
+activate C
+C -> S : cancel(userId, id)
+activate S
+S -> DB : BEGIN; SELECT Order + items\nWHERE id = ? AND userId = ?
+activate DB
+DB --> S : Order
+alt Không tìm thấy
+  S --> C : 404
+else Trạng thái không phải PENDING / PAYMENT_FAILED
+  S --> C : 409 "Đơn đã thanh toán hoặc đã kết thúc,\nliên hệ quầy để hủy"
+else Được phép hủy
+  S -> SM : assertTransition(cũ, CANCELLED)
+  activate SM
+  SM --> S : hợp lệ
+  deactivate SM
+  S -> DB : UPDATE Order SET status = CANCELLED\nWHERE id = ? AND status = cũ
+  DB --> S : count
+  alt count = 0 (yêu cầu khác vừa đổi trạng thái)
+    S -> DB : ROLLBACK
+    S --> C : 409 "vừa được cập nhật bởi yêu cầu khác"
+  else count = 1
+    loop Mỗi sản phẩm trong đơn (sắp theo id)
+      S -> DB : UPDATE Product SET stock += qty,\nversion += 1
+    end
+    S -> DB : UPDATE Payment SET status = FAILED\nWHERE orderId = ? AND status = PROCESSING\n(vô hiệu link VNPay đang chờ)
+    S -> DB : COMMIT
+    DB --> S : Order CANCELLED
+    S --> C : Order
+  end
+end
+deactivate DB
+deactivate S
+C --> UI : 200 Order / mã lỗi
+deactivate C
+UI -> UI : Làm mới cache sản phẩm
+UI --> KH : Đơn "Đã hủy" (giỏ hàng giữ nguyên)\nhoặc thông báo lỗi
+deactivate UI
+@enduml
