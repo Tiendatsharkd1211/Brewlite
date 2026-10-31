@@ -53,7 +53,7 @@ Mỗi module chịu trách nhiệm một miền nghiệp vụ và sở hữu d�
 | `promotions` | Chương trình khuyến mãi và quy tắc áp dụng ưu đãi.                                              | `Voucher`                      |
 | `prisma`     | Cung cấp Prisma Client và cấu hình kết nối cơ sở dữ liệu. Không chứa logic nghiệp vụ.            | —                              |
 
-Thư mục `common/` chứa hạ tầng dùng chung không thuộc module nghiệp vụ, gồm `JwtAuthGuard`, decorator `CurrentUser` và tiện ích chung. Các thành phần này không chứa logic của một miền nghiệp vụ cụ thể.
+Thư mục `common/` dành cho hạ tầng dùng chung không thuộc module nghiệp vụ, không chứa logic của một miền cụ thể. Hiện `common/` mới chỉ có tiện ích `sleep.ts`; `JwtAuthGuard` và decorator `CurrentUser` vẫn nằm trong `auth/`. Kế hoạch chuyển hai thành phần này sang `common/` nằm ở mục 5.3.
 
 ### 3.1. Quy tắc giao tiếp giữa các module
 
@@ -65,8 +65,8 @@ Thư mục `common/` chứa hạ tầng dùng chung không thuộc module nghi�
 ### 3.2. Quản lý transaction và tính nhất quán
 
 - **Tạo đơn và tồn kho:** Tạo đơn chạy trong một `$transaction` của Prisma. Việc trừ tồn kho dùng khóa lạc quan: đọc sản phẩm kèm cột `version`, rồi `updateMany` với điều kiện `version` không đổi và tăng `version` lên 1. Nếu `updateMany` không cập nhật dòng nào (có yêu cầu khác vừa trừ kho), giao dịch bị hủy và thử lại từ đầu, tối đa `MAX_ATTEMPTS` lần. Hết lượt thì trả 409 "vui lòng thử lại". Nếu kho không đủ, trả 409 ngay và không thử lại.
-- **Ngoại lệ về ranh giới dữ liệu:** Việc trừ kho ghi vào bảng `Product`, do module `products` sở hữu, từ trong `orders`. Đây là ngoại lệ có chủ đích để trừ kho nằm trong cùng transaction với việc tạo đơn.
-- **Trạng thái đơn:** Mọi thay đổi trạng thái đơn đi qua hàm chuyển trạng thái của `OrdersService`, dùng điều kiện `status = from` khi cập nhật để tránh ghi đè trạng thái.
+- **Ngoại lệ về ranh giới dữ liệu:** Việc trừ kho ghi vào bảng `Product`, do module `products` sở hữu, từ trong `orders`. Đây là ngoại lệ có chủ đích để trừ kho nằm trong cùng transaction với việc tạo đơn. Hai chỗ còn lại chưa phải ngoại lệ có chủ đích và được liệt kê ở mục 5.3: `orders` ghi vào `Payment` khi huỷ đơn, và `payments` đọc, khóa `Order`.
+- **Trạng thái đơn:** Mọi thay đổi trạng thái đơn đi qua hàm `moveOrderStatus` trong `orders.service.ts`, dùng điều kiện `status = from` khi cập nhật để tránh ghi đè trạng thái.
 - **Thanh toán bằng điểm:** Trừ điểm dùng điều kiện `loyaltyPoints >= số điểm cần` trong cùng transaction với việc ghi nhận thanh toán.
 
 ### 3.3. Thanh toán VNPay
@@ -118,7 +118,7 @@ VNPay nằm ngoài transaction cơ sở dữ liệu nội bộ. Quy trình như 
 1. **Ranh giới module.** Thực hiện theo mục 3.1. Các điểm cần xử lý:
    - `payments` import `moveOrderStatus`, `TX_OPTIONS` và `OrderStatus` từ `orders`. Chuyển các hàm này thành method công khai của `OrdersService` hoặc một service chuyển trạng thái riêng.
    - `payments` import `pointsEarnedFor` và `pointsNeededFor` từ `promotions/voucher-rules`. Chuyển logic điểm vào `loyalty`.
-   - `orders/dto` import `LEVELS` từ `orders/pricing`. Cần đảm bảo chỉ import phần công khai của module.
+   - `orders` ghi trực tiếp vào bảng `Payment` của `payments` khi huỷ đơn (đóng các giao dịch `PROCESSING`), và `payments` đọc, khóa và ghi bảng `Order` của `orders` bằng Prisma. Cần cung cấp method công khai ở mỗi bên (ví dụ `PaymentsService.cancelPending(orderId)` và `OrdersService.findPayable(orderId)`), hoặc ghi nhận đây là ngoại lệ có chủ đích như việc trừ kho ở mục 3.2.
    - Các controller import `JwtAuthGuard` và `CurrentUser` từ `auth`. Chuyển vào `common/auth`.
 2. **Kiểm tra tự động.** Cấu hình dependency-cruiser hoặc eslint-plugin-boundaries trong CI theo mục 3.1.
 3. **Quản lý transaction.** Dùng `$transaction` cho mọi thao tác cần tính nguyên tử. Dùng khóa lạc quan (`version`) cho tồn kho và điều kiện trạng thái cho đơn và thanh toán.
