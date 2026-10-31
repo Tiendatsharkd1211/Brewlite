@@ -1,0 +1,44 @@
+@startuml state-don-hang
+!include style.iuml
+title State-01: Máy trạng thái đơn hàng và giao dịch thanh toán
+skinparam StateFontStyle bold
+
+state "Đơn hàng (Order.status)" as O {
+  state "PENDING\n(chờ thanh toán)" as PENDING
+  state "PAID" as PAID #E8F5E9
+  state "PREPARING" as PREPARING #E8F5E9
+  state "READY" as READY #E8F5E9
+  state "COMPLETED" as COMPLETED #C8E6C9
+  state "PAYMENT_FAILED" as FAILED #FFEBEE
+  state "CANCELLED" as CANCELLED #EEEEEE
+  [*] --> PENDING : POST /orders\n/ giữ chỗ tồn kho
+  PENDING --> PAID : VNPay 00 / đủ điểm\n/ cộng điểm
+  PAID --> PREPARING : quầy nhận
+  PREPARING --> READY : pha xong
+  READY --> COMPLETED : giao khách
+  PENDING --> FAILED : VNPay lỗi / hủy
+  FAILED --> PENDING : thanh toán lại\n(khóa mới)
+  PENDING --> CANCELLED : khách hủy\n/ hoàn kho, vô hiệu link
+  FAILED --> CANCELLED : khách hủy\n/ hoàn kho
+  COMPLETED --> [*]
+  CANCELLED --> [*]
+}
+
+state "Giao dịch (Payment.status)" as P {
+  state "PROCESSING" as PP
+  state "SUCCEEDED" as PS #E8F5E9
+  state "FAILED" as PF #FFEBEE
+  state "NEEDS_REFUND" as PR #FFF3E0
+  [*] --> PP : POST /payments\n(link VNPay 15 phút)
+  PP --> PS : VNPay 00, chữ ký + số tiền đúng
+  PP --> PF : VNPay mã lỗi / hết hạn /\nđơn bị hủy trước khi trả
+  PP --> PR : VNPay trừ tiền nhưng đơn đã PAID\nbằng link khác hoặc đã hủy
+  PS --> [*]
+  PF --> [*]
+  PR --> [*]
+}
+note bottom of O
+  Mọi chuyển tiếp khác bị assertTransition() chặn (409).
+  UPDATE có điều kiện WHERE status = <cũ> chống đổi đồng thời.
+end note
+@enduml
