@@ -18,12 +18,12 @@ Sequence-01 mô tả UC-06 với đủ các lifeline tối thiểu Customer → 
 
 | Yêu cầu | Thể hiện trong Sequence-01 |
 |---|---|
-| Request/response và thứ tự gọi API | `POST /orders` (bước 3–17) → `POST /payments` (19–27) → redirect VNPay → IPN `GET /payments/vnpay/ipn` → `GET /payments/vnpay/return` |
+| Request/response và thứ tự gọi API | `POST /orders` (bước 3–17) → `POST /payments` (19–30) → redirect VNPay → IPN `GET /payments/vnpay/ipn` → `GET /payments/vnpay/return` |
 | Kiểm tra JWT và validate dữ liệu | Bước 4–5 (JwtAuthGuard, ValidationPipe + CreateOrderDto), bước 20 (CreatePaymentDto, định dạng Idempotency-Key) |
 | Transaction khi tạo đơn và cập nhật tồn kho | Bước 6–16: BEGIN, SELECT sản phẩm, UPDATE stock có điều kiện `version`, INSERT Order, COMMIT/ROLLBACK |
 | Nhánh alt thành công/thất bại | Khối `alt` cuối: thành công (IPN 00 → PAID) và thất bại/khách huỷ (mã 24 → PAYMENT_FAILED) |
-| Idempotency khi client gửi lại | Khối `opt` bước 28–31: cùng khoá trả lại giao dịch cũ, `replayed: true` |
-| Thông báo kết quả cuối cùng | Bước 44 (xác nhận PAID, mã giao dịch VNPay) và bước 50 (báo thất bại, giữ giỏ) |
+| Idempotency khi client gửi lại | Khối `opt` bước 31-34: cùng khoá trả lại giao dịch cũ, `replayed: true` |
+| Thông báo kết quả cuối cùng | Bước 47 (xác nhận PAID, mã giao dịch VNPay) và bước 53 (báo thất bại, giữ giỏ) |
 
 > Hình 3.2. Sequence-01: đặt và thanh toán đơn hàng qua VNPay – **chưa có sơ đồ** (`sequence-checkout.puml`).
 

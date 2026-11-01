@@ -1,0 +1,105 @@
+@startuml sequence-checkout
+!include style.iuml
+title Sequence-01: Đặt và thanh toán đơn hàng qua VNPay (UC-06)
+autonumber
+skinparam maxMessageSize 260
+
+actor "Customer\n(Khách hàng)" as KH
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database "Database\n(PostgreSQL)" as DB
+participant "Payment Service\n(VNPay sandbox)" as VNP
+
+KH -> UI : Bấm "Thanh toán ngay"\n(giỏ hàng, hình thức nhận, VNPay, mã giảm giá)
+activate UI
+UI -> UI : Kiểm tra giỏ không rỗng, đã có JWT,\nđịa chỉ (nếu giao hàng)
+
+== Tạo đơn (POST /orders) ==
+UI -> API : POST /orders\nAuthorization: Bearer JWT\n{items, fulfillment, pickupTime, voucherCode, paymentMethod}
+activate API
+API -> API : JwtAuthGuard kiểm tra JWT\n(sai / hết hạn → 401)
+API -> API : ValidationPipe + CreateOrderDto\n(sai dữ liệu → 400)
+API -> DB : BEGIN TRANSACTION
+activate DB
+API -> DB : SELECT Product (giá, stock, version, topping)
+DB --> API : danh sách sản phẩm
+API -> API : Tính lại giá từng dòng theo CSDL
+alt Không đủ tồn kho
+  API -> DB : ROLLBACK
+  API --> UI : 409 "Món ... đã hết hàng"
+  UI --> KH : Báo hết hàng, giữ nguyên giỏ
+else Đủ tồn kho
+  API -> DB : UPDATE Product SET stock = stock − qty,\nversion = version + 1 WHERE id = ? AND version = ?
+  note right of API : 0 dòng = xung đột phiên bản\n→ rollback, thử lại (≤ 8 lần)
+  API -> DB : Áp mã giảm giá, INSERT Order (PENDING) + OrderItem
+  API -> DB : COMMIT
+  DB --> API : Order
+  deactivate DB
+  API --> UI : 201 {id: "BL......", status: PENDING, total}
+end
+deactivate API
+
+== Bắt đầu thanh toán (POST /payments) ==
+UI -> UI : key = crypto.randomUUID()
+UI -> API : POST /payments\nIdempotency-Key: key\n{orderId, method: VNPAY}
+activate API
+API -> API : Kiểm tra JWT, định dạng khóa, CreatePaymentDto
+API -> DB : SELECT Payment WHERE idempotencyKey = key
+activate DB
+DB --> API : null (khóa mới)
+API -> DB : SELECT Order WHERE id = ? AND userId = ?
+DB --> API : Order
+API -> API : Kiểm tra đơn còn thanh toán được (PENDING / PAYMENT_FAILED)\nvà method khớp phương thức lúc tạo đơn (sai → 404 / 400)
+API -> API : Tạo và ký link vnp_* bằng HMAC-SHA512(VNP_HASH_SECRET),\nvnp_ExpireDate = +15 phút
+API -> DB : BEGIN; SELECT Order ... FOR UPDATE (kiểm tra lại trạng thái)
+note right of API : Đơn PAYMENT_FAILED (thanh toán lại)\n→ chuyển về PENDING trước khi tạo giao dịch mới
+API -> DB : INSERT Payment (PROCESSING, idempotencyKey UNIQUE,\ntxnRef, payUrl, expiresAt = +15 phút) + PaymentLog CREATE; COMMIT
+DB --> API : Payment
+deactivate DB
+API --> UI : 200 {payment, payUrl, replayed: false}
+
+opt Lỗi mạng: client gửi lại cùng Idempotency-Key
+  UI -> API : POST /payments (Idempotency-Key: key)
+  API -> DB : SELECT Payment WHERE idempotencyKey = key
+  DB --> API : Payment đã có
+  API --> UI : 200 {payment cũ, payUrl cũ, replayed: true}
+  note right of API : Không tạo giao dịch thứ 2.\nHai request đồng thời: UNIQUE chặn\nrequest thua, trả kết quả request thắng
+end
+deactivate API
+
+UI -> VNP : Chuyển trình duyệt tới payUrl
+deactivate UI
+KH -> VNP : Nhập thẻ test NCB, OTP
+activate VNP
+
+alt Thanh toán thành công
+  VNP -> API : GET /payments/vnpay/ipn?vnp_ResponseCode=00&...&vnp_SecureHash
+  activate API
+  API -> API : Kiểm chữ ký + số tiền (vnp_Amount / 100 = amount)
+  API -> DB : applyResult(): SELECT Order FOR UPDATE;\nOrder → PAID, Payment → SUCCEEDED,\ncộng điểm + LoyaltyTransaction, Voucher.usedCount + 1
+  DB --> API : OK
+  API --> VNP : {RspCode: "00"}
+  deactivate API
+  VNP -> UI : Redirect /payment/vnpay-return?vnp_...
+  activate UI
+  UI -> API : GET /payments/vnpay/return?vnp_... (JWT)
+  activate API
+  API -> DB : applyResult() — đã ghi nhận trước đó → bỏ qua
+  note right of API : Chạy local không nhận được IPN: Return URL\nghi nhận kết quả (sau khi kiểm chữ ký + số tiền)
+  API --> UI : {payment SUCCEEDED, order PAID}
+  deactivate API
+  UI -> UI : Xóa giỏ hàng
+  UI --> KH : Xác nhận: mã đơn, PAID, mã GD VNPay,\nngân hàng, điểm được cộng
+else Thanh toán thất bại / khách hủy (vd. mã 24)
+  VNP -> UI : Redirect /payment/vnpay-return?vnp_ResponseCode=24&...
+  deactivate VNP
+  UI -> API : GET /payments/vnpay/return?vnp_... (JWT)
+  activate API
+  API -> API : Kiểm chữ ký (sai → 400, không ghi)
+  API -> DB : applyResult(): Payment → FAILED,\nOrder → PAYMENT_FAILED (không trừ tiền)
+  API --> UI : {payment FAILED, order PAYMENT_FAILED}
+  deactivate API
+  UI --> KH : Báo thất bại, giữ nguyên giỏ;\nnút "Thanh toán lại" (khóa mới) / "Hủy đơn"
+end
+deactivate UI
+@enduml
