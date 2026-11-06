@@ -1,0 +1,41 @@
+@startuml uc-02-dat-thanh-toan
+!include style.iuml
+left to right direction
+title Use Case trọng tâm UC-06: Đặt và thanh toán đơn hàng
+
+actor "Khách hàng\n(thành viên)" as KH
+actor "Cổng VNPay\n(sandbox)" as VNP
+
+rectangle "BrewLite" {
+  usecase "Đặt và thanh toán\nđơn hàng" as UC6
+  usecase "Đăng nhập" as Login
+  usecase "Kiểm tra & giữ chỗ\ntồn kho" as Stock
+  usecase "Tính lại tiền\ntheo giá CSDL" as Price
+  usecase "Áp mã giảm giá" as Voucher
+  usecase "Chọn hình thức nhận\n(lấy tại quầy / giao)" as Fulfil
+  usecase "Thanh toán qua VNPay" as Pay
+  usecase "Thanh toán bằng điểm" as Points
+  usecase "Thanh toán lại\nkhi thất bại" as Retry
+  usecase "Ghi nhận kết quả VNPay\n(Return URL / IPN)" as Result
+  usecase "Kiểm tra lại với VNPay\n(querydr)" as Query
+  usecase "Cộng điểm thưởng" as Loyalty
+  usecase "Xem xác nhận đơn" as Confirm
+}
+
+KH --> UC6
+UC6 ..> Login : <<include>>
+UC6 ..> Stock : <<include>>
+UC6 ..> Price : <<include>>
+UC6 ..> Fulfil : <<include>>
+UC6 ..> Pay : <<include>>\n[luồng chính]
+UC6 ..> Confirm : <<include>>
+Voucher .> UC6 : <<extend>>
+Points .up.> UC6 : <<extend>>\n[phương thức = điểm]
+Retry .> Pay : <<extend>>\n[thanh toán lỗi]
+Pay ..> Result : <<include>>
+Query .> Result : <<extend>>\n[không nhận IPN]
+Loyalty .up.> Result : <<extend>>\n[thanh toán thành công]
+Pay -right-> VNP
+Query --> VNP
+Result <-- VNP
+@enduml
