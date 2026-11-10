@@ -11,12 +11,14 @@ interface ModalProps {
   onClose?: () => void;
   children: ReactNode;
   wide?: boolean;
+  /** Rộng hơn nữa, cho form có bảng (phiếu nhập kho) */
+  xl?: boolean;
   /** Bỏ khoảng đệm, để nội dung (ví dụ ảnh) tràn sát mép */
   flush?: boolean;
 }
 
 /** Trên mobile trượt lên từ đáy như app, trên màn hình lớn hiện giữa màn hình */
-export default function Modal({ open, titleId, onClose, children, wide, flush }: ModalProps) {
+export default function Modal({ open, titleId, onClose, children, wide, xl, flush }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -42,7 +44,7 @@ export default function Modal({ open, titleId, onClose, children, wide, flush }:
         onClick={(e) => e.stopPropagation()}
         className={`relative max-h-[92dvh] w-full animate-sheet-in overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-foam shadow-2xl sm:animate-pop-in sm:rounded-[1.75rem] ${
           flush ? '' : 'p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]'
-        } ${wide ? 'sm:max-w-lg' : 'sm:max-w-md'}`}
+        } ${xl ? 'sm:max-w-3xl' : wide ? 'sm:max-w-lg' : 'sm:max-w-md'}`}
       >
         {/* Thanh nắm kéo kiểu bottom sheet trên mobile */}
         <span className="pointer-events-none absolute left-1/2 top-2 z-10 h-1 w-10 -translate-x-1/2 rounded-full bg-roast/20 sm:hidden" aria-hidden="true" />

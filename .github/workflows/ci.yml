@@ -23,7 +23,8 @@ jobs:
           --health-cmd "pg_isready -U brewlite"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://brewlite:brewlite@localhost:5433/brewlite?schema=public
+      DIRECT_URL: postgresql://brewlite:brewlite@localhost:5433/brewlite?schema=public
+      DATABASE_URL: postgresql://brewlite_app:brewlite_app_ci@localhost:5433/brewlite?schema=public
       JWT_SECRET: ci-secret
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +35,7 @@ jobs:
       - run: npm run build
       - run: npm run test
       - run: npx prisma db push --skip-generate
+      - run: npm run db:harden
       - run: npm run test:int
 
   frontend:

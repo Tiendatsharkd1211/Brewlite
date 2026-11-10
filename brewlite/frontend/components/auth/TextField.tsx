@@ -5,7 +5,7 @@ interface Props {
   onChange: (value: string) => void;
   onBlur?: () => void;
   error?: string | null;
-  type?: 'text' | 'email';
+  type?: 'text' | 'email' | 'tel';
   autoComplete?: string;
   placeholder?: string;
 }

@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { ApiError } from '@/lib/api';
+import { DEMO_CUSTOMERS, DEMO_PASSWORD, SHOW_DEMO_HINTS } from '@/lib/demo';
+import { homeOf } from '@/lib/internal';
 import { AlertIcon } from '@/components/ui/Icons';
 import PasswordField from './PasswordField';
+import QuickLogin from './QuickLogin';
 import TextField from './TextField';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,6 +28,12 @@ export default function LoginForm({ next }: { next: string }) {
     password: !password ? 'Nhập mật khẩu' : null,
   };
 
+  // Nhân viên, quản lý lỡ đăng nhập ở trang khách thì đưa thẳng về khu làm việc của họ
+  async function signIn(mail: string, pass: string) {
+    const me = await login(mail, pass);
+    router.replace(me.role !== 'CUSTOMER' && !next.startsWith(homeOf(me.role)) ? homeOf(me.role) : next);
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setTouched({ email: true, password: true });
@@ -32,8 +41,7 @@ export default function LoginForm({ next }: { next: string }) {
     setSubmitting(true);
     setServerError(null);
     try {
-      await login(email.trim(), password);
-      router.replace(next);
+      await signIn(email.trim(), password);
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : 'Đăng nhập chưa được, thử lại sau ít phút.');
       setSubmitting(false);
@@ -41,69 +49,70 @@ export default function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <div className="rounded-[2rem] bg-foam p-6 shadow-[0_30px_60px_-40px_rgba(59,42,32,.6)] sm:p-8">
-      <h1 className="text-3xl font-extrabold tracking-tight">Chào mừng trở lại</h1>
-      <p className="mt-2 text-roast/65">Đăng nhập để thanh toán, theo dõi đơn và tích điểm.</p>
-
-      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-gold/50 bg-gold/10 px-4 py-3 text-sm">
-        <span>
-          Tài khoản demo: <b>demo@brewlite.vn</b> / <b>Brewlite123</b>
-        </span>
-        <button
-          type="button"
-          onClick={() => {
-            setEmail('demo@brewlite.vn');
-            setPassword('Brewlite123');
+    <div className="space-y-5">
+      {SHOW_DEMO_HINTS && (
+        <QuickLogin
+          title="Đăng nhập nhanh"
+          accounts={DEMO_CUSTOMERS}
+          onPick={async (a) => {
             setServerError(null);
+            try {
+              await signIn(a.email, DEMO_PASSWORD);
+            } catch (err) {
+              setServerError(err instanceof ApiError ? err.message : 'Đăng nhập chưa được, thử lại sau ít phút.');
+            }
           }}
-          className="shrink-0 font-semibold text-gold-deep underline underline-offset-4"
-        >
-          Điền sẵn
-        </button>
+        />
+      )}
+
+      <div className="rounded-[2rem] bg-foam p-6 shadow-[0_30px_60px_-40px_rgba(59,42,32,.6)] sm:p-8">
+        <h1 className="text-3xl font-extrabold tracking-tight">Chào mừng trở lại</h1>
+        <p className="mt-2 text-roast/65">Đăng nhập để thanh toán, theo dõi đơn và tích điểm.</p>
+
+        <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
+          {serverError && (
+            <p role="alert" className="flex items-start gap-2 rounded-xl bg-chili/10 px-4 py-3 text-sm text-chili">
+              <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" /> {serverError}
+            </p>
+          )}
+          <TextField
+            id="login-email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            placeholder="ten@gmail.com"
+            value={email}
+            onChange={setEmail}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            error={touched.email ? errors.email : null}
+          />
+          <PasswordField
+            id="login-password"
+            label="Mật khẩu"
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+            onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+            error={touched.password ? errors.password : null}
+          />
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gold font-bold text-roast shadow-[0_12px_28px_-12px_rgba(168,101,15,.9)] transition-[background-color,color,transform] hover:bg-gold-deep hover:text-foam active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+          >
+            {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-roast/30 border-t-roast" aria-hidden="true" />}
+            {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-roast/70">
+          Chưa có tài khoản?{' '}
+          <Link href={`/register?next=${encodeURIComponent(next)}`} className="font-bold text-espresso underline underline-offset-4">
+            Tạo tài khoản mới
+          </Link>
+        </p>
       </div>
 
-      <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
-        {serverError && (
-          <p role="alert" className="flex items-start gap-2 rounded-xl bg-chili/10 px-4 py-3 text-sm text-chili">
-            <AlertIcon className="mt-0.5 h-4 w-4 shrink-0" /> {serverError}
-          </p>
-        )}
-        <TextField
-          id="login-email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          placeholder="ten@gmail.com"
-          value={email}
-          onChange={setEmail}
-          onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-          error={touched.email ? errors.email : null}
-        />
-        <PasswordField
-          id="login-password"
-          label="Mật khẩu"
-          autoComplete="current-password"
-          value={password}
-          onChange={setPassword}
-          onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-          error={touched.password ? errors.password : null}
-        />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gold font-bold text-roast shadow-[0_12px_28px_-12px_rgba(168,101,15,.9)] transition-[background-color,color,transform] hover:bg-gold-deep hover:text-foam active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
-        >
-          {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-roast/30 border-t-roast" aria-hidden="true" />}
-          {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
-        </button>
-      </form>
-
-      <p className="mt-6 text-center text-sm text-roast/70">
-        Chưa có tài khoản?{' '}
-        <Link href={`/register?next=${encodeURIComponent(next)}`} className="font-bold text-espresso underline underline-offset-4">
-          Tạo tài khoản mới
-        </Link>
-      </p>
     </div>
   );
 }

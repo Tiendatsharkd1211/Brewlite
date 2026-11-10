@@ -1,12 +1,14 @@
 ## Làm gì
 <!-- Mô tả ngắn thay đổi, ví dụ: "Thêm nút huỷ đơn ở trang theo dõi đơn" -->
 
-## Thuộc phần việc
-<!-- Ví dụ: Hủy đơn & hoàn kho (Lê Bảo Trọng Tấn) -->
+## Thuộc task / phần việc
+<!-- Ví dụ: Task 10 – huỷ đơn và hoàn kho (Nguyễn Tiến Đạt) -->
 
-## Đã kiểm tra
-- [ ] `npm run build` chạy được (backend / frontend)
-- [ ] `npm run test` trong backend đều qua
+## Definition of Done
+- [ ] Đúng tiêu chí chấp nhận của task
+- [ ] `npm run build` chạy được (backend / frontend), `npm run test` trong backend đều qua
+- [ ] API có validate đầu vào; giao diện có trạng thái đang tải và lỗi
+- [ ] README đã cập nhật nếu cách chạy thay đổi
 - [ ] Đã chạy thử trên máy
 
 ## Người review

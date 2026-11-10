@@ -2,6 +2,7 @@
 
 import { PAYMENT_METHODS } from '@/lib/mock-data';
 import { formatNumber, formatVnd } from '@/lib/format';
+import { SHOW_DEMO_HINTS } from '@/lib/demo';
 import { SANDBOX_TEST_CARD, useVnpayStatus } from '@/lib/payments';
 import type { PaymentMethodId } from '@/lib/types';
 
@@ -27,7 +28,7 @@ export default function PaymentMethodList({ value, onChange, points, pointsNeede
           hint = notEnoughPoints
             ? `Chưa đủ điểm: cần ${formatNumber(pointsNeeded)}, bạn có ${formatNumber(points)}.`
             : `Bạn có ${formatNumber(points)} điểm, tương đương ${formatVnd(points * 100)}. Đơn này cần ${formatNumber(pointsNeeded)} điểm.`;
-        } else if (vnpayMissing) hint = 'Máy chủ chưa điền mã VNPay sandbox (VNP_TMN_CODE, VNP_HASH_SECRET trong backend/.env).';
+        } else if (vnpayMissing) hint = 'Thanh toán VNPay đang tạm ngưng, bạn chọn cách khác giúp quán nhé.';
 
         return (
           <label
@@ -43,7 +44,6 @@ export default function PaymentMethodList({ value, onChange, points, pointsNeede
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2 font-semibold">
                 {m.name}
-                {m.id === 'VNPAY' && vnpay?.sandbox && <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-gold-deep">Môi trường thử (sandbox)</span>}
               </span>
               <span className="block text-xs leading-snug text-roast/60">{hint}</span>
             </span>
@@ -57,11 +57,11 @@ export default function PaymentMethodList({ value, onChange, points, pointsNeede
       {value === 'VNPAY' && (
         <div className="rounded-2xl bg-cream px-4 py-3 text-sm leading-relaxed">
           <p>
-            Bấm <b>Thanh toán ngay</b> để chuyển sang cổng VNPay. Trả xong, VNPay đưa bạn về BrewLite và đơn tự chuyển sang <b>đã thanh toán</b>.
+            Bấm <b>Thanh toán ngay</b> để sang trang của VNPay. Trả xong bạn được đưa về BrewLite.
           </p>
-          {vnpay?.sandbox && (
+          {SHOW_DEMO_HINTS && vnpay?.sandbox && (
             <details className="mt-2">
-              <summary className="cursor-pointer font-semibold text-espresso">Thẻ test của VNPay sandbox</summary>
+              <summary className="cursor-pointer font-semibold text-espresso">Thẻ dùng thử của VNPay</summary>
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs tabular-nums">
                 <dt className="text-roast/60">Ngân hàng</dt>
                 <dd className="font-semibold">{SANDBOX_TEST_CARD.bank}</dd>

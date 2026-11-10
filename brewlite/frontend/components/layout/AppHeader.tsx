@@ -1,30 +1,50 @@
 'use client';
 
+// MĂNG-SÉT: dòng số báo + ngày, tên báo cỡ lớn, rồi thanh mục lục dính trên cùng khi cuộn.
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/context/app-store';
+import { useAuth } from '@/context/auth-context';
 import { CART_BUMP_EVENT } from '@/lib/fly-to-cart';
+import { formatVnd } from '@/lib/format';
 import { STORE } from '@/lib/mock-data';
+import { useManagerPreview } from '@/lib/preview';
 import SearchBox from '@/components/search/SearchBox';
-import { BagIcon, PinIcon } from '@/components/ui/Icons';
+import { BagIcon } from '@/components/ui/Icons';
+import CartDrawer from './CartDrawer';
 import NotificationBell from './NotificationBell';
+import NoticeBar from './NoticeBar';
 import UserMenu from './UserMenu';
 
-function LogoMark() {
-  return (
-    <svg viewBox="0 0 32 32" className="h-8 w-8" aria-hidden="true">
-      <circle cx="16" cy="16" r="16" fill="#6f4e37" />
-      <path d="M9.5 11h13l-1.4 11.2a2 2 0 0 1-2 1.8h-6.2a2 2 0 0 1-2-1.8L9.5 11Z" fill="#fffaf2" />
-      <path d="M10.6 16h10.8l-.7 6a1.6 1.6 0 0 1-1.6 1.4h-6.2a1.6 1.6 0 0 1-1.6-1.4l-.7-6Z" fill="#e09a2b" />
-      <rect x="8.5" y="8.5" width="15" height="3" rx="1.5" fill="#fffaf2" />
-    </svg>
-  );
+const WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+
+export const NAV_LINKS = [
+  { href: '/', label: 'Trang nhất' },
+  { href: '/menu', label: 'Thực đơn' },
+  { href: '/uu-dai', label: 'Ưu đãi' },
+  { href: '/orders', label: 'Đơn của tôi' },
+  { href: '/cau-chuyen', label: 'Câu chuyện' },
+  { href: '/lien-he', label: 'Liên hệ' },
+];
+
+/** Dòng trên cùng: thứ, ngày hôm nay */
+function todayLine(now: Date) {
+  const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  return `${WEEKDAYS[now.getDay()]}, ${date}`;
 }
 
 export default function AppHeader() {
-  const { cartCount, hydrated } = useAppStore();
+  const pathname = usePathname();
+  const { cartCount, subtotal, hydrated } = useAppStore();
+  const { user } = useAuth();
+  const preview = useManagerPreview();
   const [bump, setBump] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [today, setToday] = useState<string | null>(null);
+
+  // Ngày tính ở trình duyệt để khớp giờ của khách (tránh lệch giữa máy chủ và trình duyệt)
+  useEffect(() => setToday(todayLine(new Date())), []);
 
   // Giỏ hàng "nảy" lên mỗi khi có món bay vào
   useEffect(() => {
@@ -36,50 +56,84 @@ export default function AppHeader() {
     return () => window.removeEventListener(CART_BUMP_EVENT, onBump);
   }, []);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  // Nhân viên thấy thêm Quầy pha chế; quản lý thấy Quản lý cửa hàng (mỗi vai trò một khu riêng)
+  const links = user?.role === 'STAFF' ? [...NAV_LINKS, { href: '/staff', label: 'Quầy pha chế' }] : preview ? NAV_LINKS.filter((l) => l.href !== '/orders') : NAV_LINKS;
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
   return (
-    <header className={`sticky top-0 z-40 border-b transition-[background-color,box-shadow,border-color] duration-300 ${scrolled ? 'border-roast/10 bg-cream/95 shadow-[0_8px_24px_-18px_rgba(59,42,32,.6)]' : 'border-transparent bg-cream'}`}>
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-espresso">
-          <LogoMark />
-          <span className="hidden min-[380px]:inline">BrewLite</span>
+    <>
+      <NoticeBar />
+      <div className="mx-auto max-w-6xl px-4 pt-3">
+        <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-wider text-roast/70 sm:text-[11px]">
+          <span>{today ?? ' '}</span>
+          <span className="hidden sm:inline">{STORE.address}</span>
+          <span>Mở cửa {STORE.hours}</span>
+        </div>
+        <Link href="/" className="mt-1 block border-y-[3px] border-double border-roast py-1 text-center sm:py-2" aria-label="BrewLite, về trang nhất">
+          <span className="block font-display text-[2.6rem] font-black leading-none tracking-tight sm:text-6xl md:text-7xl">BrewLite</span>
+          <span className="mt-1 block font-label text-[10px] uppercase tracking-[0.3em] text-roast/70 sm:text-xs">Cà phê phin Sài Gòn · Đặt trước, khỏi xếp hàng</span>
         </Link>
-        <div className="hidden min-w-0 flex-1 md:block md:max-w-md lg:max-w-lg">
-          <SearchBox />
-        </div>
-        <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
-          {/* BrewLite chỉ có một quán nhận đơn: hiện tên quán, không cần chọn */}
-          <span className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-roast/70 lg:flex" title={STORE.address}>
-            <PinIcon className="h-4 w-4" /> {STORE.shortName}
-          </span>
-          <NotificationBell />
-          <Link
-            href="/checkout"
-            data-cart-target
-            aria-label={`Giỏ hàng, ${hydrated ? cartCount : 0} món`}
-            className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-roast/5"
-          >
-            <span className={bump ? 'animate-bump' : ''} onAnimationEnd={() => setBump(false)}>
-              <BagIcon className="h-6 w-6" />
-            </span>
-            {hydrated && cartCount > 0 && (
-              <span key={cartCount} className="absolute -right-0.5 -top-0.5 h-5 min-w-5 animate-pop-in rounded-full bg-gold px-1 text-center text-xs font-bold leading-5 tabular-nums text-roast">
-                {cartCount}
-              </span>
-            )}
-          </Link>
-          <UserMenu />
-        </div>
       </div>
-      <div className="mx-auto max-w-6xl px-4 pb-3 md:hidden">
-        <SearchBox />
-      </div>
-    </header>
+
+      <header className="sticky top-0 z-40 border-b border-roast bg-cream/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-12 max-w-6xl items-center gap-2 px-4">
+          <nav aria-label="Mục lục" className="hidden min-w-0 flex-1 md:block">
+            <ul className="flex items-center gap-5 text-[13px] font-medium uppercase">
+              {links.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    aria-current={isActive(l.href) ? 'page' : undefined}
+                    className={`border-b-2 py-1 transition-colors ${isActive(l.href) ? 'border-gold text-gold' : 'border-transparent hover:border-roast'}`}
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {!preview && (
+            <div className="min-w-0 flex-1 md:max-w-[15rem] md:flex-none lg:max-w-xs">
+              <SearchBox />
+            </div>
+          )}
+          {preview ? (
+            <Link
+              href="/quan-ly"
+              className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 bg-roast px-4 font-label text-xs font-semibold uppercase tracking-wider text-cream hover:bg-espresso"
+            >
+              ← Về trang quản lý
+            </Link>
+          ) : (
+            <div className="flex shrink-0 items-center gap-0.5">
+              <NotificationBell withLabel />
+              {/* Giỏ hàng: bấm mở khung giỏ nhanh bên phải; trên máy tính hiện luôn số món và tạm tính */}
+              <button
+                type="button"
+                onClick={() => setCartOpen(true)}
+                data-cart-target
+                aria-label={`Giỏ hàng, ${hydrated ? cartCount : 0} món`}
+                className="relative flex h-11 items-center gap-2 px-2 normal-case tracking-normal hover:bg-roast/5"
+              >
+                <span className={bump ? 'animate-bump' : ''} onAnimationEnd={() => setBump(false)}>
+                  <BagIcon className="h-7 w-7" />
+                </span>
+                <span className="hidden text-left leading-tight lg:block">
+                  <span className="block font-label text-sm font-medium uppercase tracking-wider">Giỏ hàng</span>
+                  <span className="block font-mono text-[11px] text-roast/70">{hydrated && cartCount > 0 ? `${cartCount} món · ${formatVnd(subtotal)}` : 'Chưa có món'}</span>
+                </span>
+                {hydrated && cartCount > 0 && (
+                  <span key={cartCount} className="absolute left-5 top-0.5 h-5 min-w-5 animate-pop-in bg-gold px-1 text-center font-mono text-[11px] font-semibold leading-5 text-foam">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+              <UserMenu />
+            </div>
+          )}
+        </div>
+      </header>
+      {!preview && <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />}
+    </>
   );
 }

@@ -1,9 +1,16 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Ảnh món tải lên đi kèm JSON (tối đa ~1 MB sau khi mã hoá); mọi request khác vẫn nhỏ
+  app.useBodyParser('json', { limit: '2mb' });
+
+  // Header bảo mật (chặn nhúng iframe, đoán kiểu file, lộ tên framework...)
+  app.use(helmet());
 
   // Cho phép frontend (khác cổng) gọi API
   app.enableCors({

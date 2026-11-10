@@ -23,6 +23,8 @@ export interface Product {
   id: string;
   name: string;
   description: string;
+  /** Câu giới thiệu ngắn dưới tên món (quản lý tự đặt) */
+  tagline?: string;
   price: number;
   imageUrl: string;
   stock: number;
@@ -95,6 +97,11 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+}
+
+/** Đơn trong hàng đợi của quầy: kèm tên khách để gọi khi món xong */
+export interface StaffOrder extends Order {
+  user: { fullName: string };
 }
 
 /** PROCESSING: đã tạo link VNPay, chờ khách trả. NEEDS_REFUND: VNPay đã trừ tiền nhưng đơn đã trả bằng giao dịch khác / đã huỷ */
@@ -179,17 +186,26 @@ export interface Reward {
   cost: number;
 }
 
+/** Thông báo từ backend (GET /notifications/me). readAt rỗng = chưa đọc */
 export interface AppNotification {
   id: string;
+  orderId: string | null;
   title: string;
   body: string;
-  time: string;
+  createdAt: string;
+  readAt: string | null;
 }
+
+/** CUSTOMER: khách đặt món. STAFF: nhân viên quầy */
+export type Role = 'CUSTOMER' | 'STAFF' | 'MANAGER';
 
 export interface User {
   id: string;
   fullName: string;
   email: string;
+  /** Không bắt buộc, chỉ lưu chữ số */
+  phone: string | null;
+  role: Role;
   createdAt: string;
   points: number;
   pointsLog: PointsEntry[];

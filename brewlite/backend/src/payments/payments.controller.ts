@@ -1,8 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Req } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import type { Request } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CustomerOnly } from '../auth/customer-only.decorator';
 import { clientIp } from './client-ip';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentsService } from './payments.service';
@@ -25,7 +25,7 @@ export class PaymentsController {
    */
   @Post()
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
+  @CustomerOnly()
   pay(@CurrentUser() user: User, @Headers('idempotency-key') key: string | undefined, @Body() dto: CreatePaymentDto, @Req() req: Request) {
     if (!key || !KEY_PATTERN.test(key)) {
       throw new BadRequestException('Thiếu header Idempotency-Key hợp lệ (8–128 ký tự, ví dụ một UUID)');
@@ -42,7 +42,7 @@ export class PaymentsController {
 
   /** GET /payments/vnpay/return?vnp_...: trang /payment/vnpay-return của frontend gửi nguyên chuỗi tham số VNPay trả về */
   @Get('vnpay/return')
-  @UseGuards(JwtAuthGuard)
+  @CustomerOnly()
   vnpayReturn(@CurrentUser() user: User, @Query() query: Record<string, unknown>) {
     return this.payments.handleReturn(user.id, query);
   }
@@ -55,13 +55,13 @@ export class PaymentsController {
 
   /** GET /payments/me: lịch sử giao dịch (khai báo trước ':id') */
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @CustomerOnly()
   findMine(@CurrentUser() user: User) {
     return this.payments.findMine(user.id);
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @CustomerOnly()
   findOne(@CurrentUser() user: User, @Param('id') id: string) {
     return this.payments.findOne(user.id, id);
   }
@@ -69,7 +69,7 @@ export class PaymentsController {
   /** POST /payments/:id/query: hỏi lại VNPay trạng thái giao dịch (đối soát) */
   @Post(':id/query')
   @HttpCode(200)
-  @UseGuards(JwtAuthGuard)
+  @CustomerOnly()
   reconcile(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
     return this.payments.reconcile(user.id, id, clientIp(req));
   }

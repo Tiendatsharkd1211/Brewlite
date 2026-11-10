@@ -1,16 +1,17 @@
 import { statusLabel } from '@/lib/pricing';
 import type { OrderStatus } from '@/lib/types';
 
+// Trạng thái in như con dấu: đỏ là cần khách để ý, xanh là xong việc, xám là đã kết thúc
 const STYLE: Record<OrderStatus, string> = {
-  PENDING: 'bg-gold/20 text-gold-deep',
-  PAYMENT_FAILED: 'bg-chili/10 text-chili',
-  PAID: 'bg-leaf/15 text-leaf',
-  PREPARING: 'bg-gold/25 text-gold-deep',
-  READY: 'bg-leaf text-foam',
-  COMPLETED: 'bg-roast/5 text-roast/60',
-  CANCELLED: 'bg-roast/10 text-roast/50 line-through',
+  PENDING: 'text-gold-deep',
+  PAYMENT_FAILED: 'text-chili',
+  PAID: 'text-leaf',
+  PREPARING: 'text-gold-deep',
+  READY: 'bg-leaf text-foam border-leaf',
+  COMPLETED: 'text-roast/60',
+  CANCELLED: 'text-roast/45 line-through',
 };
 
 export default function OrderStatusPill({ status, fulfillment }: { status: OrderStatus; fulfillment: 'PICKUP' | 'DELIVERY' }) {
-  return <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${STYLE[status]}`}>{statusLabel(status, fulfillment)}</span>;
+  return <span className={`stamp ${STYLE[status]}`}>{statusLabel(status, fulfillment)}</span>;
 }

@@ -1,5 +1,5 @@
 // Dữ liệu cố định phía giao diện. Menu, giá, tồn kho lấy từ API GET /products (PostgreSQL).
-import type { AppNotification, Category, Level, PaymentMethodId, Reward, SizeId, Store, Topping } from './types';
+import type { Category, Level, PaymentMethodId, Reward, SizeId, Store, Topping } from './types';
 
 export const CATEGORIES: Category[] = [
   { id: 'pha-may', name: 'Cà phê pha máy' },
@@ -38,14 +38,15 @@ export const PAYMENT_METHODS: { id: PaymentMethodId; name: string; hint: string;
   { id: 'POINTS', name: 'Điểm BrewLite', hint: '1 điểm = 100đ', badge: '★', badgeColor: '#a8650f' },
 ];
 
+// Khớp với backend/src/auth/rewards.ts
 export const REWARDS: Reward[] = [
+  { id: 'topping', name: 'Thêm 1 topping miễn phí', cost: 200 },
   { id: 'upsize', name: 'Nâng size miễn phí 1 ly', cost: 300 },
   { id: 'croissant', name: 'Bánh croissant bơ', cost: 600 },
   { id: 'free-s', name: 'Ly cà phê size S bất kỳ', cost: 800 },
+  { id: 'cake', name: 'Một bánh ngọt bất kỳ', cost: 1000 },
+  { id: 'free-l', name: 'Ly đồ uống size L bất kỳ', cost: 1200 },
+  { id: 'combo', name: 'Combo cà phê sữa đá và croissant', cost: 1300 },
+  { id: 'beans', name: 'Túi cà phê phin rang mộc 250g', cost: 2500 },
 ];
 
-export const NOTIFICATIONS: AppNotification[] = [
-  { id: 'n1', title: 'Ưu đãi VNPay tuần này', body: 'Nhập VNPAY20 khi thanh toán qua VNPay, giảm 20%, tối đa 25.000đ.', time: 'Hôm nay' },
-  { id: 'n2', title: 'Món mới: Cà phê muối', body: 'Kem muối mặn nhẹ trên nền cà phê sữa đậm. Có tại quán An Dương Vương.', time: 'Hôm qua' },
-  { id: 'n3', title: 'Bạn vừa nhận 1.250 điểm', body: 'Quà chào mừng thành viên mới. Dùng điểm để thanh toán hoặc đổi quà.', time: '3 ngày trước' },
-];

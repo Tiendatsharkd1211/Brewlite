@@ -1,11 +1,20 @@
-// Lược đồ CSDL BrewLite (PostgreSQL). Chạy `npm run db:push` để tạo bảng, `npm run seed` để nạp dữ liệu mẫu.
+// Lược đồ CSDL BrewLite (PostgreSQL). Chạy `npm run db:setup` để tạo bảng, rào CSDL và nạp dữ liệu mẫu.
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // App chạy bằng tài khoản chỉ đọc/ghi dữ liệu; prisma db push dùng tài khoản chủ CSDL (src/db-harden.ts)
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// CUSTOMER: khách đặt món. STAFF: nhân viên quầy, chuyển đơn đã thanh toán qua các bước pha chế
+enum Role {
+  CUSTOMER
+  STAFF
+  MANAGER // quản lý cửa hàng: kho nguyên liệu, xem quầy và góp ý
 }
 
 enum OrderStatus {
@@ -50,32 +59,70 @@ enum VoucherType {
 model User {
   id            String               @id @default(uuid())
   email         String               @unique
+  /// Số di động 10 số, chỉ lưu chữ số (0912345678). Không bắt buộc; quản lý dùng để tìm khách
+  phone         String?              @unique
   fullName      String
   passwordHash  String
+  /// Lần đổi mật khẩu gần nhất: token cấp trước thời điểm này hết hiệu lực (đăng xuất mọi máy khác)
+  passwordChangedAt DateTime?
   loyaltyPoints Int                  @default(0)
+  role          Role                 @default(CUSTOMER)
   createdAt     DateTime             @default(now())
+  /// Quản lý khoá tài khoản khách: có giá trị là đang khoá, không đăng nhập được. Không có xoá tài khoản.
+  lockedAt      DateTime?
+  /// Lý do khoá, hiện cho khách khi họ đăng nhập
+  lockReason    String?
   orders        Order[]
   loyaltyLogs   LoyaltyTransaction[]
+  notifications Notification[]
+  favorites     Favorite[]
+  accountLogs   AccountLog[]
+}
+
+enum AccountAction {
+  LOCK
+  UNLOCK
+}
+
+/// Lịch sử khoá / mở khoá tài khoản khách, ai làm và vì sao
+model AccountLog {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    AccountAction
+  reason    String
+  byName    String // tên quản lý thao tác (lưu chữ để đổi tên, xoá quản lý không mất lịch sử)
+  createdAt DateTime      @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Product {
-  id          String      @id // slug, ví dụ "bac-xiu"
+  id          String       @id // slug, ví dụ "bac-xiu"
   name        String
   description String
   price       Int // giá size S, đơn vị đồng
   imageUrl    String
+  /// Câu giới thiệu ngắn dưới tên món (quản lý đặt)
+  tagline     String       @default("")
   stock       Int // số ly/bánh còn bán được
-  version     Int         @default(0) // optimistic locking: tăng 1 mỗi lần trừ/hoàn kho
+  /// Quản lý ẩn món: khách không thấy, API đặt đơn từ chối
+  hidden      Boolean      @default(false)
+  /// Quản lý báo hết: vẫn hiện nhưng không đặt được; mở bán lại thì giữ nguyên số tồn cũ
+  soldOut     Boolean      @default(false)
+  version     Int          @default(0) // optimistic locking: tăng 1 mỗi lần trừ/hoàn kho
   category    String
   kind        String // "drink" | "food"
   tag         String? // "hot" | "new"
-  rating      Float       @default(5)
-  sold        Int         @default(0)
-  hasIce      Boolean     @default(true)
-  color       String      @default("#6f4e37")
+  rating      Float        @default(5)
+  sold        Int          @default(0)
+  hasIce      Boolean      @default(true)
+  color       String       @default("#6f4e37")
   keywords    String[]
   toppings    Topping[]
   orderItems  OrderItem[]
+  favoritedBy Favorite[]
+  recipeLines RecipeLine[]
 }
 
 model Topping {
@@ -172,7 +219,10 @@ model PaymentLog {
 model Voucher {
   code             String         @id
   type             VoucherType
+  /// Tiêu đề hiện trên trang Ưu đãi
   label            String
+  /// Điều kiện ghi cho khách đọc
+  terms            String         @default("")
   percent          Int            @default(0)
   maxDiscount      Int            @default(0)
   minOrder         Int            @default(0)
@@ -181,6 +231,18 @@ model Voucher {
   usageLimit       Int?
   usedCount        Int            @default(0)
   active           Boolean        @default(true)
+  /// Hiện trên trang Ưu đãi; tắt đi thì mã vẫn dùng được nếu khách biết
+  showOnSite       Boolean        @default(true)
+  /// Thời gian hiệu lực (giờ Việt Nam), trống là không giới hạn
+  startsAt         DateTime?
+  endsAt           DateTime?
+}
+
+/// Nội dung trang khách mà quản lý chỉnh (chữ trang nhất, dải thông báo, khối quảng bá): một dòng JSON mỗi khoá
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }
 
 model LoyaltyTransaction {
@@ -193,4 +255,115 @@ model LoyaltyTransaction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// Thông báo gửi khách (đơn đổi trạng thái, quà chào mừng). readAt rỗng = chưa đọc
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String? // đơn liên quan để bấm vào mở đơn; không ràng buộc khoá ngoại để xoá đơn không kéo theo lỗi
+  title     String
+  body      String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([userId, createdAt])
+}
+
+/// Món yêu thích, gắn với tài khoản (đăng nhập máy nào cũng thấy). Mỗi món chỉ lưu một lần cho một người.
+model Favorite {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, productId])
+}
+
+/// Góp ý gửi từ trang Liên hệ. Khách chưa đăng nhập vẫn gửi được; nhân viên đọc ở GET /staff/feedback
+model Feedback {
+  id        String    @id @default(uuid())
+  name      String
+  email     String
+  topic     String
+  orderCode String?
+  message   String
+  createdAt DateTime  @default(now())
+  /// Quản lý xử lý: new, doing, done; ghi chú nội bộ khách không thấy
+  status    String    @default("new")
+  note      String    @default("")
+  updatedAt DateTime?
+
+  @@index([createdAt])
+}
+
+// ---------- Kho nguyên liệu (quản lý) ----------
+
+/// Nguyên liệu: tồn tính theo đơn vị nhập (kg, lít, hộp...); công thức tính theo đơn vị nhỏ (g, ml), 1 unit = per sub
+model Ingredient {
+  id           String        @id // slug, ví dụ "robusta"
+  name         String
+  group        String
+  unit         String
+  sub          String
+  per          Float
+  stock        Float
+  min          Float
+  /// Giá vốn bình quân gia quyền cho 1 unit (đồng)
+  cost         Int
+  createdAt    DateTime      @default(now())
+  moves        StockMove[]
+  receiptLines ReceiptLine[]
+  recipeLines  RecipeLine[]
+}
+
+/// Lịch sử kho chỉ ghi việc quan trọng: nhập kho (RECEIPT) và xuất pha chế khi quầy bắt đầu pha (USAGE)
+model StockMove {
+  id           String     @id @default(uuid())
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  kind         String // "receipt" | "usage"
+  /// Theo unit: dương là vào kho, âm là ra kho
+  qty          Float
+  at           DateTime   @default(now())
+  note         String
+  /// Mã phiếu nhập hoặc mã đơn
+  ref          String?
+
+  @@index([ingredientId, at])
+  @@index([at])
+}
+
+/// Phiếu nhập kho: mã PN0001, PN0002...
+model Receipt {
+  id    String        @id
+  at    DateTime      @default(now())
+  by    String
+  note  String        @default("")
+  lines ReceiptLine[]
+}
+
+model ReceiptLine {
+  id           Int        @id @default(autoincrement())
+  receiptId    String
+  receipt      Receipt    @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  qty          Float
+  /// Giá mua 1 unit (đồng)
+  price        Int
+}
+
+/// Định lượng 1 ly size M (hoặc 1 cái bánh) của một món
+model RecipeLine {
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  /// Theo đơn vị công thức (sub)
+  amount       Float
+
+  @@id([productId, ingredientId])
 }

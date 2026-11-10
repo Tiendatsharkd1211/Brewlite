@@ -1,69 +1,53 @@
 'use client';
 
-// Dải "Bán chạy nhất" cuộn ngang, có nút cuộn trên desktop
+// "Món bán chạy": 6 món được gọi nhiều nhất, mỗi món một cột ngăn bằng đường kẻ dọc như mục trên báo
 import Link from 'next/link';
-import { useMemo, useRef } from 'react';
-import { formatNumber, formatVnd } from '@/lib/format';
+import { useMemo } from 'react';
+import { formatVnd } from '@/lib/format';
 import { useProducts } from '@/lib/products';
 import { useProductSheet } from '@/components/product/ProductSheetProvider';
-import { ChevronLeftIcon, PlusIcon } from '@/components/ui/Icons';
 import Skeleton from '@/components/ui/Skeleton';
 import ProductImage from './ProductImage';
 
 export default function BestSellerRail() {
-  const railRef = useRef<HTMLDivElement>(null);
   const { openProduct } = useProductSheet();
   const { data, isLoading } = useProducts();
   const top = useMemo(() => [...(data ?? [])].sort((a, b) => b.sold - a.sold).slice(0, 6), [data]);
   if (!isLoading && top.length === 0) return null;
-  const scroll = (dir: 1 | -1) => railRef.current?.scrollBy({ left: dir * railRef.current.clientWidth * 0.8, behavior: 'smooth' });
 
   return (
     <section aria-labelledby="best-title">
-      <div className="flex items-end justify-between gap-3">
-        <h2 id="best-title" className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Bán chạy nhất tuần này
+      <div className="flex items-end justify-between gap-3 border-b-2 border-roast pb-2">
+        <h2 id="best-title" className="text-3xl font-black">
+          Món bán chạy
         </h2>
-        <div className="hidden gap-2 sm:flex">
-          <button type="button" onClick={() => scroll(-1)} className="grid h-10 w-10 place-items-center rounded-full border-2 border-roast/10 bg-foam hover:border-espresso" aria-label="Cuộn sang trái">
-            <ChevronLeftIcon />
-          </button>
-          <button type="button" onClick={() => scroll(1)} className="grid h-10 w-10 place-items-center rounded-full border-2 border-roast/10 bg-foam hover:border-espresso" aria-label="Cuộn sang phải">
-            <ChevronLeftIcon className="h-5 w-5 rotate-180" />
-          </button>
-        </div>
+        <p className="kicker hidden sm:block">Khách quen hay gọi</p>
       </div>
-      <div ref={railRef} className="no-scrollbar -mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2">
-        {isLoading &&
-          [0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[5/4] w-[78%] shrink-0 rounded-[1.75rem] sm:w-[44%] lg:w-[31%]" />)}
+      <ol className="no-scrollbar -mx-4 flex snap-x overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-6 lg:px-0">
+        {isLoading && [0, 1, 2, 3].map((i) => <Skeleton key={i} className="mr-4 mt-4 h-64 w-40 shrink-0" />)}
         {top.map((p, i) => (
-          <article key={p.id} className="group relative w-[78%] shrink-0 snap-start overflow-hidden rounded-[1.75rem] sm:w-[44%] lg:w-[31%]">
+          <li key={p.id} className="group relative w-44 shrink-0 snap-start border-l border-roast px-4 py-4 first:border-l-0 lg:w-auto">
             <Link href={`/product/${p.id}`} className="absolute inset-0 z-10" aria-label={`Xem chi tiết ${p.name}`} />
-            <div className="aspect-[5/4]">
-              <ProductImage product={p} width={700} className="h-full w-full transition-transform duration-700 group-hover:scale-[1.05]" />
+            <span className="font-display text-5xl font-black leading-none text-gold">{String(i + 1).padStart(2, '0')}</span>
+            <div className="mt-2 aspect-square overflow-hidden border border-roast bg-cream p-1">
+              <ProductImage product={p} width={400} className="menu-print h-full w-full" />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-roast/85 via-roast/20 to-transparent" aria-hidden="true" />
-            <span className="absolute left-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-foam text-sm font-extrabold text-espresso">{i + 1}</span>
-            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 text-foam">
-              <div>
-                <p className="text-lg font-extrabold leading-tight">{p.name}</p>
-                <p className="text-sm text-foam/75">
-                  {formatVnd(p.price)}, {formatNumber(p.sold)} ly đã bán
-                </p>
-              </div>
+            <p className="mt-2 font-display text-lg font-bold leading-tight">{p.name}</p>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <span className="tabular-nums text-sm font-semibold">{formatVnd(p.price)}</span>
               <button
                 type="button"
                 onClick={() => openProduct(p.id)}
                 disabled={p.stock <= 0}
-                className="relative z-20 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold text-roast transition-transform hover:scale-105 active:scale-90"
+                className="relative z-20 font-label text-xs font-semibold underline underline-offset-4 hover:text-gold disabled:text-roast/40 disabled:no-underline"
                 aria-label={`Chọn tuỳ chọn và thêm ${p.name} vào giỏ`}
               >
-                <PlusIcon />
+                {p.stock <= 0 ? 'Hết' : '+ Thêm'}
               </button>
             </div>
-          </article>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }

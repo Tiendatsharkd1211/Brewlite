@@ -1,9 +1,10 @@
 'use client';
 
-// LỊCH SỬ GIAO DỊCH: mỗi lần thanh toán (VNPay hoặc điểm) kèm mã giao dịch VNPay, ngân hàng, thời gian, mã phản hồi.
-// Bấm 1 dòng để xem chi tiết và nhật ký trao đổi với VNPay; nút "Kiểm tra lại với VNPay" gọi API truy vấn (querydr).
+// LỊCH SỬ GIAO DỊCH kiểu sao kê: tab Thành công / Chưa thành công, chia theo ngày, mỗi lần hiện 10 dòng.
+// Bấm 1 dòng để xem chi tiết; nút "Kiểm tra lại với VNPay" gọi API truy vấn (querydr).
+// Nhật ký trao đổi với VNPay và mã phản hồi chỉ hiện khi bật gợi ý trình bày (lib/demo.ts).
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { PAYMENT_METHODS } from '@/lib/mock-data';
 import { formatDateTime, formatVnd } from '@/lib/format';
@@ -12,6 +13,8 @@ import type { PaymentHistoryItem, PaymentLog } from '@/lib/types';
 import Modal from '@/components/ui/Modal';
 import Skeleton from '@/components/ui/Skeleton';
 import { AlertIcon, ReceiptIcon } from '@/components/ui/Icons';
+import { SHOW_DEMO_HINTS } from '@/lib/demo';
+import { statusLabel } from '@/lib/pricing';
 
 const SOURCE_LABEL: Record<PaymentLog['source'], string> = {
   CREATE: 'Tạo link',
@@ -76,17 +79,19 @@ function PaymentDetailModal({ id, onClose }: { id: string | null; onClose: () =>
 
           <dl className="mt-4 divide-y divide-roast/10 rounded-2xl bg-cream px-4 py-2 text-sm">
             <Row label="Phương thức" value={methodName(p.method)} />
-            <Row label="Đơn hàng" value={`#${p.order.id} (${p.order.status})`} />
+            <Row label="Đơn hàng" value={`#${p.order.id} (${statusLabel(p.order.status).toLowerCase()})`} />
             <Row label="Tạo lúc" value={formatDateTime(p.createdAt)} />
             {p.method === 'VNPAY' && (
               <>
-                <Row label="Mã giao dịch BrewLite (vnp_TxnRef)" value={p.txnRef} />
+                <Row label="Mã tham chiếu" value={p.txnRef} />
                 <Row label="Mã giao dịch VNPay" value={p.vnpTransactionNo && p.vnpTransactionNo !== '0' ? p.vnpTransactionNo : null} />
                 <Row label="Ngân hàng" value={p.vnpBankCode} />
                 <Row label="Mã giao dịch ngân hàng" value={p.vnpBankTranNo} />
                 <Row label="Loại thẻ" value={p.vnpCardType ? (CARD_TYPE_LABEL[p.vnpCardType] ?? p.vnpCardType) : null} />
-                <Row label="Thời gian thanh toán (VNPay)" value={p.vnpPayDate ? formatVnpDate(p.vnpPayDate) : null} />
-                <Row label="Mã phản hồi / trạng thái" value={p.vnpResponseCode || p.vnpTransactionStatus ? `${p.vnpResponseCode ?? '—'} / ${p.vnpTransactionStatus ?? '—'}` : null} />
+                <Row label="Thời gian thanh toán" value={p.vnpPayDate ? formatVnpDate(p.vnpPayDate) : null} />
+                {SHOW_DEMO_HINTS && (
+                  <Row label="Mã phản hồi / trạng thái" value={p.vnpResponseCode || p.vnpTransactionStatus ? `${p.vnpResponseCode ?? '—'} / ${p.vnpTransactionStatus ?? '—'}` : null} />
+                )}
                 <Row label="Link hết hạn lúc" value={p.expiresAt ? formatDateTime(p.expiresAt) : null} />
               </>
             )}
@@ -104,7 +109,7 @@ function PaymentDetailModal({ id, onClose }: { id: string | null; onClose: () =>
             ))}
           </ul>
 
-          {p.logs.length > 0 && (
+          {SHOW_DEMO_HINTS && p.logs.length > 0 && (
             <>
               <h3 className="mt-5 text-sm font-extrabold">Nhật ký trao đổi với VNPay</h3>
               <ol className="mt-2 space-y-3 border-l-2 border-roast/10 pl-4">
@@ -153,17 +158,58 @@ function PaymentDetailModal({ id, onClose }: { id: string | null; onClose: () =>
   );
 }
 
+type Tab = 'all' | 'ok' | 'not-ok';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'ok', label: 'Thành công' },
+  { id: 'not-ok', label: 'Chưa thành công' },
+];
+const PAGE = 10;
+
+const time = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+/** "Hôm nay", "Hôm qua", "Thứ hai, 02/11" */
+function dayLabel(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((start(now) - start(d)) / 86_400_000);
+  if (diff === 0) return 'Hôm nay';
+  if (diff === 1) return 'Hôm qua';
+  return d.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' }).replace(/^./, (c) => c.toUpperCase());
+}
+
+/** Màu chữ trạng thái trong dòng sao kê */
+const statusTone = (p: PaymentHistoryItem) =>
+  p.status === 'SUCCEEDED' ? 'text-leaf' : p.status === 'NEEDS_REFUND' ? 'font-semibold text-chili' : isExpired(p) ? 'text-roast/50' : p.status === 'PROCESSING' ? 'text-gold-deep' : 'text-chili';
+
 export default function PaymentHistory() {
   const { data: payments, error, refetch, isLoading } = useMyPayments();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('all');
+  const [shown, setShown] = useState(PAGE);
+
+  const list = useMemo(
+    () => (payments ?? []).filter((p) => tab === 'all' || (tab === 'ok' ? p.status === 'SUCCEEDED' : p.status !== 'SUCCEEDED')),
+    [payments, tab],
+  );
+  const groups = useMemo(() => {
+    const out: { label: string; items: PaymentHistoryItem[] }[] = [];
+    for (const p of list.slice(0, shown)) {
+      const label = dayLabel(p.createdAt);
+      const last = out[out.length - 1];
+      if (last?.label === label) last.items.push(p);
+      else out.push({ label, items: [p] });
+    }
+    return out;
+  }, [list, shown]);
 
   if (error) {
     return (
-      <div className="mt-6 flex flex-col items-center rounded-3xl bg-foam px-6 py-10 text-center">
+      <div className="mt-6 flex flex-col items-center border-2 border-roast px-6 py-10 text-center">
         <AlertIcon className="h-10 w-10 text-chili" />
         <p className="mt-3 font-bold">Không tải được lịch sử giao dịch</p>
         <p className="mt-1 text-sm text-roast/65">{error instanceof ApiError ? error.message : 'Thử lại sau.'}</p>
-        <button type="button" onClick={() => refetch()} className="mt-5 rounded-full bg-gold px-5 py-2.5 font-bold text-roast">
+        <button type="button" onClick={() => refetch()} className="mt-5 bg-gold px-5 py-2.5 font-label text-sm font-semibold uppercase tracking-wider text-foam">
           Thử lại
         </button>
       </div>
@@ -174,7 +220,7 @@ export default function PaymentHistory() {
     return (
       <div className="mt-6 space-y-3" aria-busy="true">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-20 rounded-2xl" />
+          <Skeleton key={i} className="h-14" />
         ))}
       </div>
     );
@@ -182,60 +228,106 @@ export default function PaymentHistory() {
 
   if (payments.length === 0) {
     return (
-      <div className="mx-auto mt-8 max-w-md rounded-3xl bg-foam px-6 py-12 text-center">
-        <ReceiptIcon className="mx-auto h-10 w-10 text-roast/40" />
+      <div className="mx-auto mt-8 max-w-md border-2 border-roast px-6 py-12 text-center">
+        <ReceiptIcon className="mx-auto h-10 w-10 text-gold" />
         <h2 className="mt-3 text-xl font-extrabold">Chưa có giao dịch nào</h2>
-        <p className="mt-2 text-sm text-roast/65">Đặt món và thanh toán qua VNPay, giao dịch sẽ hiện ở đây.</p>
-        <Link href="/menu" className="mt-6 inline-flex rounded-full bg-gold px-6 py-3 font-bold text-roast">
+        <p className="mt-2 text-sm text-roast/65">Đặt món và thanh toán, giao dịch sẽ hiện ở đây.</p>
+        <Link href="/menu" className="mt-6 inline-flex h-11 items-center bg-gold px-6 font-label text-sm font-semibold uppercase tracking-wider text-foam">
           Xem thực đơn
         </Link>
       </div>
     );
   }
 
-  const succeeded = payments.filter((p) => p.status === 'SUCCEEDED');
+  const ok = payments.filter((p) => p.status === 'SUCCEEDED');
+  const paidVnpay = ok.filter((p) => p.method === 'VNPAY').reduce((n, p) => n + p.amount, 0);
+  const paidPoints = ok.filter((p) => p.method === 'POINTS').reduce((n, p) => n + p.amount, 0);
+  const refund = payments.filter((p) => p.status === 'NEEDS_REFUND');
+  const counts: Record<Tab, number> = { all: payments.length, ok: ok.length, 'not-ok': payments.length - ok.length };
+
   return (
     <>
-      <section className="mt-6 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-foam p-4">
-          <p className="text-xs text-roast/60">Đã thanh toán thành công</p>
-          <p className="mt-1 text-xl font-extrabold tabular-nums text-espresso">{formatVnd(succeeded.filter((p) => p.method === 'VNPAY').reduce((n, p) => n + p.amount, 0))}</p>
-          <p className="text-xs text-roast/55">qua VNPay</p>
+      {/* Tổng đã trả, tách theo cách trả */}
+      <section className="mt-6 grid grid-cols-2 border-y-2 border-roast">
+        <div className="py-4 pr-4">
+          <p className="kicker">Đã trả qua VNPay</p>
+          <p className="mt-1 font-display text-3xl font-black tabular-nums">{formatVnd(paidVnpay)}</p>
         </div>
-        <div className="rounded-2xl bg-foam p-4">
-          <p className="text-xs text-roast/60">Số giao dịch</p>
-          <p className="mt-1 text-xl font-extrabold tabular-nums">
-            {succeeded.length}/{payments.length}
-          </p>
-          <p className="text-xs text-roast/55">thành công / tổng</p>
+        <div className="border-l border-roast py-4 pl-4">
+          <p className="kicker">Đã trả bằng điểm</p>
+          <p className="mt-1 font-display text-3xl font-black tabular-nums">{formatVnd(paidPoints)}</p>
         </div>
       </section>
 
-      <ul className="mt-4 space-y-3">
-        {payments.map((p, index) => (
-          <li key={p.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}>
-            <button type="button" onClick={() => setOpenId(p.id)} className="flex w-full items-center gap-4 rounded-2xl bg-foam p-4 text-left transition-shadow hover:shadow-[0_16px_32px_-20px_rgba(59,42,32,.5)]">
-              <span className={`grid h-11 w-12 shrink-0 place-items-center rounded-xl text-[11px] font-extrabold text-white ${p.method === 'VNPAY' ? 'bg-[#005baa]' : 'bg-gold-deep'}`} aria-hidden="true">
-                {p.method === 'VNPAY' ? 'VNPAY' : '★'}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2 font-bold">
-                  Đơn #{p.order.id} <StatusPill p={p} />
-                </span>
-                <span className="mt-0.5 block truncate text-sm text-roast/65">
-                  {p.method === 'VNPAY'
-                    ? p.vnpTransactionNo && p.vnpTransactionNo !== '0'
-                      ? `Mã GD VNPay ${p.vnpTransactionNo} · ${p.vnpBankCode ?? ''}`
-                      : `Mã GD ${p.txnRef}`
-                    : 'Trả bằng điểm BrewLite'}
-                </span>
-                <span className="block text-xs text-roast/50">{formatDateTime(p.createdAt)}</span>
-              </span>
-              <span className="shrink-0 font-bold tabular-nums text-espresso">{formatVnd(p.amount)}</span>
-            </button>
-          </li>
+      {refund.length > 0 && (
+        <p className="mt-4 border-2 border-chili px-4 py-3 text-sm text-chili" role="alert">
+          Có {refund.length} giao dịch quán cần hoàn tiền cho bạn. Quán sẽ hoàn về đúng cách bạn đã trả; cần hỏi thêm, bạn gửi góp ý kèm mã đơn.
+        </p>
+      )}
+
+      <div className="no-scrollbar -mx-4 mt-6 flex gap-1 overflow-x-auto border-b-2 border-roast px-4" role="tablist" aria-label="Lọc giao dịch">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => {
+              setTab(t.id);
+              setShown(PAGE);
+            }}
+            className={`-mb-0.5 shrink-0 border-b-[3px] px-3 py-2.5 font-label text-sm font-semibold uppercase tracking-wider transition-colors ${
+              tab === t.id ? 'border-gold text-roast' : 'border-transparent text-roast/55 hover:text-roast'
+            }`}
+          >
+            {t.label}
+            {counts[t.id] > 0 && <span className="ml-1.5 font-mono text-xs opacity-70">{counts[t.id]}</span>}
+          </button>
         ))}
-      </ul>
+      </div>
+
+      {list.length === 0 ? (
+        <p className="py-10 text-center text-roast/60">Không có giao dịch nào ở mục này.</p>
+      ) : (
+        <>
+          {groups.map((g) => (
+            <section key={g.label} className="mt-5">
+              <h3 className="font-label text-xs font-semibold uppercase tracking-wider text-roast/55">{g.label}</h3>
+              <ul className="mt-1 divide-y divide-dotted divide-roast/40 border-y border-roast/60">
+                {g.items.map((p) => {
+                  const okRow = p.status === 'SUCCEEDED';
+                  return (
+                    <li key={p.id}>
+                      <button type="button" onClick={() => setOpenId(p.id)} className="grid w-full grid-cols-[3.25rem_1fr_auto] items-center gap-x-3 py-3 plain-btn text-left hover:bg-roast/5">
+                        <span className="font-mono text-sm text-roast/60">{time(p.createdAt)}</span>
+                        <span className="min-w-0">
+                          <span className="font-bold">Đơn #{p.order.id}</span>
+                          <span className="block truncate text-sm text-roast/65">
+                            {p.method === 'VNPAY' ? `VNPay${p.vnpBankCode && p.vnpBankCode !== 'VNPAY' ? ` · ${p.vnpBankCode}` : ''}` : 'Điểm BrewLite'} · <span className={statusTone(p)}>{statusLabelOf(p)}</span>
+                          </span>
+                        </span>
+                        {/* Giao dịch không thành công: gạch số tiền để khách thấy ngay là chưa bị trừ */}
+                        <span className={`text-right font-semibold tabular-nums ${okRow ? '' : 'text-roast/40 line-through'}`}>{formatVnd(p.amount)}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+          {list.length > shown && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setShown((n) => n + PAGE)}
+                className="inline-flex h-11 items-center border-2 border-roast px-6 font-label text-sm font-semibold uppercase tracking-wider hover:bg-roast hover:text-cream"
+              >
+                Xem thêm {Math.min(PAGE, list.length - shown)} giao dịch
+              </button>
+            </div>
+          )}
+        </>
+      )}
       <PaymentDetailModal id={openId} onClose={() => setOpenId(null)} />
     </>
   );

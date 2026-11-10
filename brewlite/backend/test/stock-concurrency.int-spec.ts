@@ -64,20 +64,20 @@ describe('Tồn kho khi đặt đồng thời + máy trạng thái (PostgreSQL t
     const fx = await createFixture(s.prisma, 5);
     try {
       const order = await s.orders.create(fx.user.id, orderDto(fx.product.id));
-      await expect(s.orders.advance(fx.user.id, order.id)).rejects.toBeInstanceOf(ConflictException);
+      await expect(s.orders.advance(order.id)).rejects.toBeInstanceOf(ConflictException);
 
       await s.orders.cancel(fx.user.id, order.id);
       await expect(s.payments.pay(fx.user.id, randomUUID(), { orderId: order.id, method: 'VNPAY' }, '127.0.0.1')).rejects.toThrow('huỷ');
 
       const paid = await s.orders.create(fx.user.id, orderDto(fx.product.id));
       expect((await payByVnpay(s, fx.user.id, paid.id)).order.status).toBe('PAID');
-      const preparing = await s.orders.advance(fx.user.id, paid.id);
+      const preparing = await s.orders.advance(paid.id);
       expect(preparing.status).toBe('PREPARING');
       await expect(s.orders.cancel(fx.user.id, paid.id)).rejects.toBeInstanceOf(ConflictException);
-      await s.orders.advance(fx.user.id, paid.id); // READY
-      const done = await s.orders.advance(fx.user.id, paid.id); // COMPLETED
+      await s.orders.advance(paid.id); // READY
+      const done = await s.orders.advance(paid.id); // COMPLETED
       expect(done.status).toBe('COMPLETED');
-      await expect(s.orders.advance(fx.user.id, paid.id)).rejects.toBeInstanceOf(ConflictException);
+      await expect(s.orders.advance(paid.id)).rejects.toBeInstanceOf(ConflictException);
     } finally {
       await fx.cleanup();
     }

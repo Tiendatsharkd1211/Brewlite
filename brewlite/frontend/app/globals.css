@@ -1,16 +1,32 @@
 @import "tailwindcss";
 
-/* ===== Design tokens BrewLite: dùng như bg-espresso, text-roast, animate-sheet-in ... ===== */
+/* ===== Design tokens BrewLite – phong cách "tờ báo Sài Gòn xưa": giấy ngà, mực đen, mực đỏ in dấu =====
+   Giữ nguyên tên token cũ (roast, foam, gold...) để mọi trang đổi theo cùng lúc. */
 @theme {
-  --color-roast: #3b2a20;      /* chữ chính */
-  --color-espresso: #6f4e37;   /* màu thương hiệu */
-  --color-crema: #c99a6b;
-  --color-cream: #f5ecdd;      /* nền trang */
-  --color-foam: #fffaf2;       /* nền thẻ, panel, modal */
-  --color-gold: #e09a2b;       /* nút CTA, chữ roast đặt trên */
-  --color-gold-deep: #a8650f;
-  --color-leaf: #3d7a4f;       /* thành công */
-  --color-chili: #b23a2a;      /* lỗi */
+  --color-roast: #1b1712;      /* mực đen: chữ chính */
+  --color-espresso: #1b1712;   /* màu thương hiệu = mực đen */
+  --color-crema: #8d8373;      /* mực nhạt, chữ phụ */
+  --color-cream: #efe7d4;      /* giấy báo: nền trang */
+  --color-foam: #f7f1e3;       /* giấy sáng hơn: nền ô, khung, modal */
+  --color-gold: #b3261e;       /* mực đỏ: nút chính, con dấu */
+  --color-gold-deep: #8a1c16;
+  --color-leaf: #2f5d3a;       /* thành công */
+  --color-chili: #b3261e;      /* lỗi */
+
+  --font-display: var(--font-playfair), 'Times New Roman', serif;
+  --font-serif: var(--font-lora), Georgia, serif;
+  --font-label: var(--font-oswald), 'Arial Narrow', sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Báo in không bo góc: mọi rounded-* chỉ còn góc vuông hoặc hơi mềm */
+  --radius-xs: 0px;
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
 
   --animate-fade-in: fade-in 0.25s ease-out both;
   --animate-sheet-in: sheet-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -62,7 +78,7 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-lora), Georgia, serif;
 }
 
 html {
@@ -70,9 +86,99 @@ html {
 }
 
 body {
-  background: var(--color-cream);
+  background-color: var(--color-cream);
+  /* Hạt giấy in rất nhẹ */
+  background-image: radial-gradient(rgb(27 23 18 / 0.035) 1px, transparent 1.2px);
+  background-size: 4px 4px;
   color: var(--color-roast);
 }
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Nhãn, nút, menu: chữ hẹp in hoa như tít phụ của báo */
+button, .font-label, label, nav a, th {
+  font-family: var(--font-label);
+  letter-spacing: 0.04em;
+}
+button { text-transform: uppercase; }
+/* Nút là cả một dòng nội dung (dòng giao dịch...): giữ chữ thường như văn bản */
+.plain-btn { font-family: var(--font-serif); text-transform: none; letter-spacing: normal; }
+
+/* Ô nhập nằm trong thẻ label không thừa hưởng chữ hẹp in hoa của nhãn */
+label input,
+label textarea,
+label select {
+  font-family: var(--font-serif);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Ô nhập được trình duyệt tự điền: giữ nền giấy thay cho nền xanh mặc định */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 100px var(--color-foam) inset;
+  -webkit-text-fill-color: var(--color-roast);
+  caret-color: var(--color-roast);
+}
+
+/* Giá tiền, mã đơn: chữ máy đánh chữ */
+.tabular-nums { font-family: var(--font-mono); }
+
+/* ===== Ghi đè đặt NGOÀI @layer nên thắng các class Tailwind =====
+   Biến các thẻ bo tròn + đổ bóng kiểu app thành ô báo: viền mực mảnh, không bóng. */
+[class*="shadow-"] { box-shadow: none !important; }
+[class*="rounded-["] { border-radius: 2px !important; }
+.rounded-full:not(.keep-round) { border-radius: 2px; }
+.bg-foam { box-shadow: inset 0 0 0 1px rgb(27 23 18 / 0.55); }
+/* Nút đỏ: chữ màu giấy cho dễ đọc */
+.bg-gold { color: var(--color-foam); }
+.hover\:bg-gold-deep:hover { color: var(--color-foam); }
+
+/* Đường kẻ đôi đầu mục, như dưới măng-sét báo */
+.rule-double { border-top: 3px double var(--color-roast); }
+.rule { border-top: 1px solid var(--color-roast); }
+.kicker {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+/* Con dấu mực đỏ, nghiêng nhẹ */
+.stamp {
+  display: inline-block;
+  border: 2px solid currentColor;
+  padding: 0.15rem 0.55rem;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+}
+/* Ảnh in báo: hơi ngả màu cũ, rê chuột thì hiện màu thật */
+.newsprint { filter: grayscale(0.85) sepia(0.2) contrast(1.05); transition: filter 0.5s ease; }
+.group:hover .newsprint, .newsprint:hover { filter: none; }
+/* Tem thư: mép răng cưa đục lỗ (lỗ tròn để lộ màu giấy phía sau), cùng màu giấy với trang */
+.postage {
+  --hole: 5px;
+  --step: 14px;
+  padding: 9px;
+  background: radial-gradient(circle at center, transparent var(--hole), var(--color-roast) calc(var(--hole) + 0.5px)) calc(var(--step) / -2) calc(var(--step) / -2) / var(--step) var(--step) round;
+}
+.postage-inner { background: var(--color-cream); outline: 2px solid var(--color-gold); outline-offset: -2px; }
+.postage-inner.postage-ink { outline-color: var(--color-roast); }
+
+/* Ảnh món trong thực đơn: in cùng một tông đen trắng ngả sépia, nền sáng hoà vào màu giấy,
+   để ảnh chụp ở nhiều nơi khác nhau trông như cùng một bộ ảnh; rê chuột thì hiện màu */
+.menu-print { filter: grayscale(1) sepia(0.28) contrast(1.12) brightness(1.04); mix-blend-mode: multiply; transition: filter 0.5s ease, transform 0.6s ease; }
+/* Rê chuột vào món thì ảnh hiện màu thật và phóng nhẹ */
+.group:hover .menu-print { filter: none; mix-blend-mode: normal; transform: scale(1.04); }
 
 :focus-visible {
   outline: 2px solid var(--color-gold-deep);
@@ -88,7 +194,7 @@ body {
 
 /* Khối giữ chỗ khi đang tải: dải sáng chạy ngang */
 .skeleton {
-  background: linear-gradient(90deg, rgb(59 42 32 / 0.07) 25%, rgb(59 42 32 / 0.13) 50%, rgb(59 42 32 / 0.07) 75%);
+  background: linear-gradient(90deg, rgb(27 23 18 / 0.06) 25%, rgb(27 23 18 / 0.12) 50%, rgb(27 23 18 / 0.06) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.3s linear infinite;
 }

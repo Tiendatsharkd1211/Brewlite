@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { normalizePhone, PHONE_MESSAGE, PHONE_RE } from '../../common/phone';
 
 export class RegisterDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -11,6 +12,12 @@ export class RegisterDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   @IsEmail({}, { message: 'Email không hợp lệ' })
   email!: string;
+
+  /** Không bắt buộc; quản lý dùng để tìm khách */
+  @Transform(normalizePhone)
+  @IsOptional()
+  @Matches(PHONE_RE, { message: PHONE_MESSAGE })
+  phone?: string;
 
   @IsString()
   @MinLength(8, { message: 'Mật khẩu cần ít nhất 8 ký tự' })

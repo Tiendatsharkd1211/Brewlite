@@ -3,9 +3,12 @@
 // Bộ chọn tuỳ chọn món: size, đường, đá, topping, ghi chú, số lượng.
 // Dùng chung cho trang chi tiết món và tấm "Thêm vào giỏ" bật lên khi bấm nút +.
 import { useState, type ReactNode } from 'react';
-import { MAX_QTY, useAppStore } from '@/context/app-store';
+import { MAX_QTY } from '@/context/app-store';
 import { CATEGORIES, SIZES } from '@/lib/mock-data';
-import { formatNumber, formatVnd } from '@/lib/format';
+import { useFavorites } from '@/lib/favorites';
+import Link from 'next/link';
+import { useManagerPreview } from '@/lib/preview';
+import { formatVnd } from '@/lib/format';
 import { unitPriceOf } from '@/lib/pricing';
 import type { CartItem, Level, NewCartItem, Product, SizeId } from '@/lib/types';
 import QuantityStepper from '@/components/ui/QuantityStepper';
@@ -38,7 +41,7 @@ function OptionGroup({ title, aside, children }: { title: string; aside?: string
 }
 
 export default function ProductCustomizer({ product, initial, variant, submitLabel, titleId, onSubmit }: Props) {
-  const { favorites, toggleFavorite } = useAppStore();
+  const { favorites, toggleFavorite } = useFavorites();
   const isDrink = product.kind === 'drink';
   const [size, setSize] = useState<SizeId>(initial?.size ?? 'M');
   const [sugar, setSugar] = useState<Level>(initial?.sugar ?? 100);
@@ -50,6 +53,7 @@ export default function ProductCustomizer({ product, initial, variant, submitLab
   const toppings = product.toppings;
   const maxQty = Math.max(1, Math.min(MAX_QTY, product.stock));
   const soldOut = product.stock <= 0;
+  const preview = useManagerPreview();
   const unitPrice = unitPriceOf(product, isDrink ? size : null, toppingIds);
   const total = unitPrice * quantity;
   const category = CATEGORIES.find((c) => c.id === product.category);
@@ -77,28 +81,32 @@ export default function ProductCustomizer({ product, initial, variant, submitLab
         <h2 id={titleId} className={`font-extrabold leading-tight tracking-tight ${variant === 'page' ? 'text-3xl md:text-4xl' : 'text-2xl'}`}>
           {product.name}
         </h2>
-        <button
-          type="button"
-          onClick={() => toggleFavorite(product.id)}
-          aria-pressed={favorite}
-          aria-label={favorite ? `Bỏ ${product.name} khỏi yêu thích` : `Thêm ${product.name} vào yêu thích`}
-          className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 transition-colors ${favorite ? 'border-chili bg-chili/10 text-chili' : 'border-roast/10 text-roast/50 hover:text-chili'}`}
-        >
-          <HeartIcon filled={favorite} />
-        </button>
+        {!preview && (
+          <button
+            type="button"
+            onClick={() => toggleFavorite(product.id)}
+            aria-pressed={favorite}
+            aria-label={favorite ? `Bỏ ${product.name} khỏi yêu thích` : `Thêm ${product.name} vào yêu thích`}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 transition-colors ${favorite ? 'border-chili bg-chili/10 text-chili' : 'border-roast/10 text-roast/50 hover:text-chili'}`}
+          >
+            <HeartIcon filled={favorite} />
+          </button>
+        )}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         <span className="text-xl font-bold tabular-nums text-espresso">{formatVnd(product.price)}</span>
-        <span className="inline-flex items-center gap-1 text-roast/70">
-          <StarIcon className="h-4 w-4 text-gold" /> {product.rating.toFixed(1).replace('.', ',')}
-          <span className="text-roast/50">({formatNumber(product.sold)} đã bán)</span>
-        </span>
+        {product.rating > 0 && (
+          <span className="inline-flex items-center gap-1 text-roast/70">
+            <StarIcon className="h-4 w-4 text-gold" /> {product.rating.toFixed(1).replace('.', ',')}
+          </span>
+        )}
         {soldOut ? (
           <span className="rounded-full bg-chili/10 px-2.5 py-0.5 text-xs font-bold text-chili">Hết hàng</span>
         ) : product.stock <= 10 ? (
           <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-xs font-bold text-gold-deep">Chỉ còn {product.stock} phần</span>
         ) : null}
       </div>
+      {product.tagline && <p className="mt-2 font-serif text-lg italic leading-snug text-gold">{product.tagline}</p>}
       <p className="mt-3 max-w-prose leading-relaxed text-roast/75">{product.description}</p>
 
       {isDrink && (
@@ -166,18 +174,26 @@ export default function ProductCustomizer({ product, initial, variant, submitLab
             : 'fixed inset-x-0 bottom-0 z-20 border-t border-roast/10 bg-foam/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:static md:mt-8 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none'
         }
       >
-        <div className="mx-auto flex max-w-5xl items-center gap-3">
-          <QuantityStepper value={quantity} onChange={setQuantity} max={maxQty} label={product.name} />
-          <button
-            type="button"
-            onClick={submit}
-            disabled={soldOut}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-gold px-5 font-bold text-roast shadow-[0_10px_24px_-10px_rgba(168,101,15,.8)] transition-[background-color,color,transform] enabled:hover:bg-gold-deep enabled:hover:text-foam enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-roast/15 disabled:text-roast/45 disabled:shadow-none"
-          >
-            {soldOut ? 'Tạm hết hàng' : submitLabel}
-            {!soldOut && <span className="tabular-nums">{formatVnd(total)}</span>}
-          </button>
-        </div>
+        {preview ? (
+          <div className="mx-auto flex max-w-5xl justify-end">
+            <Link href={`/quan-ly/thuc-don?sua=${product.id}`} className="shrink-0 bg-roast px-4 py-2 font-label text-xs font-semibold uppercase tracking-wider text-cream">
+              Sửa món này
+            </Link>
+          </div>
+        ) : (
+          <div className="mx-auto flex max-w-5xl items-center gap-3">
+            <QuantityStepper value={quantity} onChange={setQuantity} max={maxQty} label={product.name} />
+            <button
+              type="button"
+              onClick={submit}
+              disabled={soldOut}
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-gold px-5 font-bold text-roast shadow-[0_10px_24px_-10px_rgba(168,101,15,.8)] transition-[background-color,color,transform] enabled:hover:bg-gold-deep enabled:hover:text-foam enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-roast/15 disabled:text-roast/45 disabled:shadow-none"
+            >
+              {soldOut ? 'Tạm hết hàng' : submitLabel}
+              {!soldOut && <span className="tabular-nums">{formatVnd(total)}</span>}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

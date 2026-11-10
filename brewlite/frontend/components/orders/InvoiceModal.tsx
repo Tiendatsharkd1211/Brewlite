@@ -5,6 +5,7 @@ import { describeOptions, formatDateTime, formatNumber, formatVnd } from '@/lib/
 import type { Order } from '@/lib/types';
 import Modal from '@/components/ui/Modal';
 import { CloseIcon } from '@/components/ui/Icons';
+import { statusLabel } from '@/lib/pricing';
 
 /** Hoá đơn điện tử của một đơn (dữ liệu mẫu, chưa phải hoá đơn có mã của cơ quan thuế) */
 export default function InvoiceModal({ order, onClose }: { order: Order | null; onClose: () => void }) {
@@ -18,7 +19,7 @@ export default function InvoiceModal({ order, onClose }: { order: Order | null; 
                 Hoá đơn điện tử
               </h2>
               <p className="text-sm text-roast/60">
-                Đơn #{order.id}, {formatDateTime(order.createdAt)}, trạng thái {order.status}
+                Đơn #{order.id}, {formatDateTime(order.createdAt)}, trạng thái: {statusLabel(order.status, order.fulfillment).toLowerCase()}
               </p>
             </div>
             <button type="button" onClick={onClose} className="-m-2 rounded-full p-2 hover:bg-roast/5" aria-label="Đóng hoá đơn">
@@ -27,7 +28,7 @@ export default function InvoiceModal({ order, onClose }: { order: Order | null; 
           </div>
 
           <div className="mt-4 rounded-2xl bg-cream p-4 text-sm">
-            <p className="font-bold">Công ty TNHH BrewLite (dữ liệu mẫu)</p>
+            <p className="font-bold">BrewLite</p>
             <p className="text-roast/65">{STORE.name}, {STORE.address}</p>
             <p className="text-roast/65">Thanh toán: {PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.name}</p>
           </div>

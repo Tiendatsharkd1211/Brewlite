@@ -1,0 +1,843 @@
+\documentclass[12pt,a4paper]{article}
+
+% ---------- Tiếng Việt, phông ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+
+% ---------- Trang, khoảng cách ----------
+\usepackage[a4paper,left=3cm,right=2cm,top=3.2cm,bottom=2.8cm,headheight=1.4cm,headsep=0.9cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.3}
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{6pt}
+
+% ---------- Hình, bảng, danh sách ----------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\captionsetup{labelsep=colon,font=normalsize}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.5em,itemsep=4pt,topsep=8pt}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\renewcommand{\arraystretch}{1.25}
+
+% ---------- Tiêu đề mục ----------
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{6pt}{18pt}
+\titlespacing*{\subsection}{0pt}{20pt}{12pt}
+\titlespacing*{\subsubsection}{0pt}{16pt}{10pt}
+
+% ---------- Mục lục ----------
+\usepackage{tocloft}
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\cfttoctitlefont}{\normalfont\Large\bfseries}
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{24pt}
+\renewcommand{\cftsecfont}{\bfseries}
+\renewcommand{\cftsecpagefont}{\bfseries}
+\setlength{\cftbeforesecskip}{14pt}
+\setlength{\cftbeforesubsecskip}{6pt}
+\setlength{\cftbeforesubsubsecskip}{6pt}
+\setlength{\cftsubsubsecnumwidth}{3.2em}
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+
+% ---------- Header, footer ----------
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{%
+  \raisebox{-0.25\height}{\includegraphics[height=1.0cm]{hinh/logo.png}}\hspace{0.8cm}%
+  \begin{tabular}[b]{@{}l@{}}\small\bfseries Trường Đại học Sài Gòn\\ \small\bfseries Khoa Công Nghệ Thông Tin\end{tabular}}
+\fancyfoot[L]{\scriptsize BrewLite - Ứng dụng đặt đồ uống \& Thanh toán Online}
+\fancyfoot[R]{\scriptsize Trang \thepage/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+\fancypagestyle{plain}{}  % trang Mục lục cũng có header/footer như mẫu
+
+% ---------- Khung mã nguồn / kết quả chạy lệnh ----------
+\definecolor{nenterm}{RGB}{24,24,24}
+\definecolor{chuterm}{RGB}{230,230,230}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+\newtcolorbox{terminal}[1][0.95\textwidth]{colback=nenterm,colframe=nenterm,arc=0pt,boxrule=0pt,
+  left=6pt,right=6pt,top=5pt,bottom=5pt,width=#1,before upper=\color{chuterm}}
+\fvset{fontsize=\scriptsize}
+
+% ---------- Ảnh chụp màn hình ----------
+% \anh{độ rộng}{đường dẫn}{chú thích}
+% Có file thì chèn ảnh; chưa có file thì in một khung xám ghi tên file cần chụp,
+% nên báo cáo luôn biên dịch được. Chụp xong chỉ cần bỏ ảnh vào thư mục hinh/.
+\newcommand{\khungtrong}[2]{%
+  \fbox{\parbox[c][5.5cm][c]{#1}{\centering\color{gray}\small
+    Chèn ảnh chụp màn hình\\[4pt]\texttt{#2}}}}
+\newcommand{\chenanh}[2]{\IfFileExists{#2}{\includegraphics[width=#1]{#2}}{\khungtrong{#1}{#2}}}
+\newcommand{\anh}[3]{%
+  \begin{figure}[H]
+  \centering
+  \chenanh{#1}{#2}
+  \caption{#3}
+  \end{figure}}
+% Hai ảnh xếp trên dưới: \anhdoi{rộng 1}{file 1}{rộng 2}{file 2}{chú thích}
+\newcommand{\anhdoi}[5]{%
+  \begin{figure}[H]
+  \centering
+  \chenanh{#1}{#2}\\[8pt]
+  \chenanh{#3}{#4}
+  \caption{#5}
+  \end{figure}}
+
+% ---------- Mẫu một User Story ----------
+\newcommand{\userstory}[2]{%
+  \noindent\textbf{User Story:}\par
+  #1\par
+  \hspace*{\parindent}\textbf{Tiêu chí chấp nhận (Acceptance Criteria):}
+  \begin{itemize}
+    #2
+  \end{itemize}}
+
+\newcommand{\co}{$\checkmark$}
+\newcommand{\khong}{--}
+
+\usepackage[hidelinks]{hyperref}
+
+% =====================================================================
+%  THÔNG TIN BÌA - SỬA Ở ĐÂY
+% =====================================================================
+\newcommand{\gvhd}{ThS. Từ Lăng Phiêu}
+\newcommand{\thanhvien}{%
+  Nguyễn Tiến Đạt - 3124410061\\
+  Phan Thành Đạt - 3124410065\\
+  Đinh Văn Đạt - 3124410053}
+\newcommand{\thangnam}{11/2026}
+
+\begin{document}
+
+% =====================================================================
+%  BÌA
+% =====================================================================
+\begin{titlepage}
+  \setstretch{1.15}
+  \centering
+  {\large\bfseries TRƯỜNG ĐẠI HỌC SÀI GÒN\\[2pt] KHOA CÔNG NGHỆ THÔNG TIN\par}
+  \vspace{1.2cm}
+  \includegraphics[width=3.2cm]{hinh/logo.png}\par
+  \vspace{1.6cm}
+  {\Large\bfseries CÔNG NGHỆ PHẦN MỀM\par}
+  \vspace{1cm}
+  \rule{\textwidth}{0.6pt}\par
+  \vspace{0.5cm}
+  {\huge\bfseries BrewLite\par}
+  \vspace{0.6cm}
+  {\LARGE\bfseries Ứng dụng Đặt đồ uống\\[4pt] \& Thanh toán Online\par}
+  \vspace{0.5cm}
+  \rule{\textwidth}{0.6pt}\par
+  \vfill
+  \begin{tabular}{@{}r@{\hspace{0.6em}}l@{}}
+    \textbf{GVHD:} & \gvhd\\[8pt]
+    \textbf{SV:}   & \begin{tabular}[t]{@{}l@{}}\thanhvien\end{tabular}
+  \end{tabular}\par
+  \vfill
+  {\bfseries TP. HỒ CHÍ MINH, THÁNG \thangnam\par}
+\end{titlepage}
+
+% =====================================================================
+%  MỤC LỤC
+% =====================================================================
+\setcounter{page}{1}
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{GIỚI THIỆU}
+% =====================================================================
+\subsection{Giới thiệu}
+Tại các quán cà phê, khách hàng thường phải xếp hàng chờ gọi món và thanh toán vào giờ cao điểm. Việc ghi order và thu tiền thủ công cũng dễ dẫn đến nhầm lẫn đơn hàng và sai sót khi thu ngân. Ở phía quán, nhân viên pha chế khó nắm được đơn nào đã thanh toán, đơn nào cần làm trước; người quản lý thì khó theo dõi doanh thu, tồn kho nguyên liệu và phản hồi của khách.
+
+BrewLite là ứng dụng đặt đồ uống trên nền tảng web theo hướng Mobile-First, phục vụ chi nhánh BrewLite An Dương Vương (273 An Dương Vương, Phường 3, Quận 5, TP.HCM). Khách hàng xem thực đơn, tùy chỉnh size, mức đường, mức đá và topping, quản lý giỏ hàng, đặt đơn, thanh toán không tiền mặt qua cổng VNPay (môi trường sandbox) hoặc bằng điểm thưởng, sau đó theo dõi trạng thái đơn và tới quầy đọc mã đơn để nhận món.
+
+So với phiên bản trước, BrewLite được làm lại toàn bộ giao diện theo phong cách ``tờ báo Sài Gòn xưa'' và bổ sung \textbf{cơ chế phân quyền theo vai trò} với ba loại tài khoản: khách hàng, nhân viên quầy và quản lý cửa hàng. Mỗi vai trò có khu làm việc riêng: khách dùng trang mua hàng, nhân viên dùng \textit{Quầy pha chế}, quản lý dùng khu \textit{Quản lý cửa hàng} để quản lý thực đơn, mã giảm giá, nội dung trang, tài khoản khách, phản hồi, nguyên liệu và nhập kho.
+
+\subsection{Mục tiêu đề tài}
+\subsubsection{Mục tiêu tổng quát}
+Xây dựng ứng dụng BrewLite hỗ trợ người dùng đặt đồ uống và thanh toán trực tuyến qua cổng VNPay, đồng thời cung cấp công cụ cho nhân viên quầy xử lý đơn và cho quản lý vận hành cửa hàng. Hệ thống phải ghi nhận đơn hàng, giao dịch, điểm thưởng và tồn kho chính xác, an toàn, và mỗi người dùng chỉ được làm đúng những việc thuộc vai trò của mình.
+
+\subsubsection{Mục tiêu cụ thể}
+\begin{itemize}
+  \item Hoàn thiện luồng mua hàng của khách: chọn món, giỏ hàng, đặt đơn, thanh toán VNPay hoặc bằng điểm, theo dõi đơn.
+  \item Xây dựng phân quyền theo vai trò (\texttt{CUSTOMER}, \texttt{STAFF}, \texttt{MANAGER}) ở cả backend và giao diện.
+  \item Xây dựng màn hình quầy pha chế để nhân viên chuyển đơn qua các bước pha chế.
+  \item Xây dựng khu quản lý cửa hàng: tổng quan doanh thu, thực đơn, mã giảm giá, nội dung trang, tài khoản khách, phản hồi, kho nguyên liệu.
+  \item Thiết kế lại giao diện thống nhất, dễ dùng trên cả điện thoại và máy tính.
+\end{itemize}
+
+\subsection{Đối tượng sử dụng}
+Hệ thống BrewLite hướng đến ba nhóm đối tượng chính. Vai trò của mỗi tài khoản được lưu trong cơ sở dữ liệu, không suy ra từ email hay do người dùng tự chọn.
+
+\subsubsection{Khách hàng}
+Khách hàng sử dụng ứng dụng để xem danh sách đồ uống, lựa chọn và tùy chỉnh sản phẩm, đặt hàng, thanh toán qua VNPay hoặc bằng điểm, theo dõi đơn hàng, lưu món yêu thích, tích lũy và đổi điểm thưởng, gửi góp ý cho quán.
+
+\subsubsection{Nhân viên quầy}
+Nhân viên quầy đăng nhập vào \textit{Quầy pha chế}, xem hàng đợi các đơn đã thanh toán, chuyển đơn qua các bước \textit{Bắt đầu pha} $\rightarrow$ \textit{Pha xong} $\rightarrow$ \textit{Đã giao khách}, nhận cảnh báo nguyên liệu sắp hết và hủy đơn đã thanh toán nhưng chưa pha khi cần (bắt buộc ghi lý do).
+
+\subsubsection{Quản lý cửa hàng}
+Quản lý cửa hàng theo dõi tổng quan doanh thu và đơn hàng, quản lý thực đơn (thêm món, đổi giá, ẩn món, báo hết), mã giảm giá, nội dung trang chủ, tài khoản khách (khóa, mở khóa có lý do), phản hồi của khách, nguyên liệu, công thức và phiếu nhập kho.
+
+\subsection{Phạm vi đề tài}
+Đề tài tập trung vào việc xây dựng các chức năng của hệ thống đặt đồ uống trực tuyến cho một chi nhánh, bao gồm:
+\begin{itemize}
+  \item Xem danh sách đồ uống, tìm kiếm và tùy chỉnh món.
+  \item Quản lý giỏ hàng.
+  \item Đặt hàng trực tuyến.
+  \item Thanh toán đơn hàng qua VNPay sandbox hoặc bằng điểm thưởng.
+  \item Xem lịch sử đơn hàng và lịch sử giao dịch.
+  \item Phân quyền theo ba vai trò: khách hàng, nhân viên quầy, quản lý cửa hàng.
+  \item Quầy pha chế và khu quản lý cửa hàng (phần mở rộng ngoài MVP).
+\end{itemize}
+
+Đề tài không bao gồm thanh toán bằng tiền thật, hóa đơn điện tử có mã của cơ quan thuế và quản lý nhiều chi nhánh.
+
+\subsection{Công nghệ sử dụng}
+\begin{table}[H]
+\centering
+\caption{Công nghệ sử dụng trong BrewLite}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Thành phần} & \textbf{Công nghệ} \\ \hline
+Frontend      & Next.js 15 (React, TypeScript), TailwindCSS 4, Zustand (giỏ hàng), React Query (gọi API) \\ \hline
+Backend       & NestJS 11 (REST API), class-validator, JWT + Passport, bcrypt (\texttt{bcryptjs}), helmet, throttler \\ \hline
+Cơ sở dữ liệu & PostgreSQL 16, Prisma ORM \\ \hline
+Thanh toán    & VNPay sandbox và điểm BrewLite \\ \hline
+DevOps        & Docker, Docker Compose, GitHub Actions (CI) \\ \hline
+\end{tabularx}
+\end{table}
+
+\newpage
+% =====================================================================
+\section{PHÂN TÍCH YÊU CẦU HỆ THỐNG}
+% =====================================================================
+\subsection{Yêu cầu chức năng (Functional Requirements)}
+
+\subsubsection{Hiển thị danh sách đồ uống (Menu)}
+Hệ thống hiển thị danh sách các loại đồ uống và bánh hiện có tại cửa hàng BrewLite, chia theo nhóm (cà phê truyền thống, cà phê pha máy, trà và đá xay, bánh ngọt), bao gồm hình ảnh, tên sản phẩm, giá bán, số lượt bán và tình trạng còn hàng.
+
+Người dùng có thể lọc theo nhóm, sắp xếp và tìm kiếm món. Ô tìm kiếm hiểu chữ không dấu, chữ cái đầu và tên gọi khác (ví dụ gõ \texttt{bx} ra ``Bạc xỉu''). Món bị quản lý ẩn không xuất hiện; món hết hàng hoặc hết nguyên liệu hiển thị nhãn \textit{Hết hàng}.
+
+\subsubsection{Xem chi tiết và tùy chọn đồ uống}
+Người dùng có thể xem thông tin chi tiết của từng sản phẩm, bao gồm tên, hình ảnh, mô tả và giá bán.
+
+Hệ thống cho phép lựa chọn kích thước (S, M, L), mức đường, mức đá (0\%, 30\%, 50\%, 100\%), các loại topping, ghi chú và số lượng. Giá tiền được cập nhật ngay theo các tùy chọn đã chọn.
+
+\subsubsection{Quản lý giỏ hàng}
+Người dùng có thể thêm đồ uống vào giỏ hàng, thay đổi số lượng, sửa tùy chọn hoặc xóa sản phẩm. Giỏ hàng nhanh trượt ra từ cạnh phải để xem mà không rời trang đang mở.
+
+Hệ thống tự động cập nhật tổng số lượng và tổng tiền. Thông tin giỏ hàng được lưu trên trình duyệt để không mất khi tải lại trang. Trước khi thanh toán, trang thanh toán hỏi máy chủ báo giá lại (\texttt{POST /orders/quote}); nếu quản lý vừa đổi giá hoặc món vừa hết, khách được báo ngay.
+
+\subsubsection{Đăng ký và đăng nhập tài khoản}
+Hệ thống cho phép khách đăng ký tài khoản bằng họ tên, email, số điện thoại (không bắt buộc) và mật khẩu. Tài khoản mới được tặng điểm chào mừng.
+
+Mọi vai trò đăng nhập chung ở trang \texttt{/login}. Sau khi đăng nhập, hệ thống đọc vai trò trong cơ sở dữ liệu và tự chuyển hướng: khách về trang mua hàng, nhân viên vào Quầy pha chế, quản lý vào khu Quản lý cửa hàng.
+
+Người dùng có thể đổi mật khẩu; khi đổi, mọi thiết bị khác đang đăng nhập tài khoản đó bị đăng xuất.
+
+\subsubsection{Phân quyền theo vai trò}
+Hệ thống có ba vai trò: \texttt{CUSTOMER} (khách hàng), \texttt{STAFF} (nhân viên quầy), \texttt{MANAGER} (quản lý cửa hàng). Mỗi API được gắn vai trò được phép gọi; người dùng sai vai trò nhận lỗi \texttt{403 Forbidden}.
+
+\begin{itemize}
+  \item Vai trò được đọc lại từ cơ sở dữ liệu ở mỗi request, nên đổi hay thu hồi quyền có hiệu lực ngay.
+  \item Đăng ký trên web luôn tạo tài khoản khách; không thể tự gán vai trò qua dữ liệu gửi lên.
+  \item Tài khoản nội bộ (nhân viên, quản lý) không được đặt món, thanh toán, đổi điểm hay lưu món yêu thích, tránh lẫn đơn của người trong quán với đơn thật.
+  \item Giao diện cũng tách khu theo vai trò: nhân viên mở trang của khách bị đưa về quầy; quản lý xem được trang khách nhưng không vào được giỏ hàng, thanh toán, tài khoản khách.
+\end{itemize}
+
+\begin{longtable}{|p{6.2cm}|>{\centering\arraybackslash}p{1.7cm}|>{\centering\arraybackslash}p{1.7cm}|>{\centering\arraybackslash}p{1.7cm}|>{\centering\arraybackslash}p{1.5cm}|}
+\caption{Ma trận phân quyền chức năng}\\
+\hline
+\textbf{Chức năng} & \textbf{Vãng lai} & \textbf{Khách hàng} & \textbf{Nhân viên} & \textbf{Quản lý} \\ \hline
+\endfirsthead
+\hline
+\textbf{Chức năng} & \textbf{Vãng lai} & \textbf{Khách hàng} & \textbf{Nhân viên} & \textbf{Quản lý} \\ \hline
+\endhead
+Xem thực đơn, chi tiết món            & \co & \co & \khong & \co \\ \hline
+Gửi góp ý (trang Liên hệ)             & \co & \co & \khong & \co \\ \hline
+Đặt đơn, thanh toán, đổi điểm         & \khong & \co & \khong & \khong \\ \hline
+Lịch sử đơn, lịch sử giao dịch        & \khong & \co & \khong & \khong \\ \hline
+Món yêu thích                         & \khong & \co & \khong & \khong \\ \hline
+Đổi mật khẩu, nhận thông báo          & \khong & \co & \co & \co \\ \hline
+Hàng đợi quầy, chuyển bước pha chế    & \khong & \khong & \co & \khong \\ \hline
+Quầy hủy đơn đã thanh toán            & \khong & \khong & \co & \khong \\ \hline
+Cảnh báo nguyên liệu sắp hết          & \khong & \khong & \co & \co \\ \hline
+Tổng quan doanh thu                   & \khong & \khong & \khong & \co \\ \hline
+Quản lý thực đơn, mã giảm giá, nội dung trang & \khong & \khong & \khong & \co \\ \hline
+Khóa, mở khóa tài khoản khách         & \khong & \khong & \khong & \co \\ \hline
+Xử lý phản hồi của khách              & \khong & \khong & \khong & \co \\ \hline
+Nguyên liệu, công thức, nhập kho      & \khong & \khong & \khong & \co \\ \hline
+\end{longtable}
+
+\subsubsection{Đặt hàng trực tuyến}
+Sau khi lựa chọn đồ uống, khách hàng tiến hành đặt hàng từ giỏ hàng, chọn hình thức nhận món (đến lấy tại quầy hoặc giao tận nơi) và thời gian lấy.
+
+Hệ thống kiểm tra thông tin đơn hàng, số lượng sản phẩm, tình trạng tồn kho và nguyên liệu trước khi xác nhận. Khi đặt hàng thành công, đơn được lưu ở trạng thái chờ thanh toán (\texttt{PENDING}). Đơn chưa thanh toán quá 30 phút được hệ thống tự hủy và trả món về kho.
+
+\subsubsection{Thanh toán trực tuyến}
+BrewLite hỗ trợ thanh toán không dùng tiền mặt qua cổng VNPay trong môi trường thử nghiệm (sandbox), hoặc trả bằng điểm thưởng BrewLite.
+
+Sau khi thanh toán, hệ thống kiểm tra chữ ký và số tiền VNPay trả về, cập nhật đơn hàng sang \texttt{PAID} và thông báo kết quả. Trường hợp thanh toán thất bại, khách được báo lý do và có thể thanh toán lại. Khách có thể dùng chức năng \textit{Kiểm tra lại với VNPay} để đối soát khi chưa rõ kết quả.
+
+\subsubsection{Theo dõi, xem lịch sử và chi tiết đơn hàng}
+Khách hàng xem được danh sách đơn đã đặt, chia tab theo trạng thái và nhóm theo ngày; đơn đang pha được đưa lên đầu kèm tiến độ. Trang theo dõi đơn tự cập nhật trạng thái (\texttt{PAID} $\rightarrow$ \texttt{PREPARING} $\rightarrow$ \texttt{READY} $\rightarrow$ \texttt{COMPLETED}) khi quầy chuyển bước, hiển thị mã đơn để đọc tại quầy và hóa đơn của đơn hàng.
+
+Khách cũng xem được lịch sử giao dịch kiểu sao kê (thành công, chưa thành công) và chi tiết từng giao dịch VNPay. Người dùng chỉ xem được đơn và giao dịch thuộc tài khoản của mình.
+
+\subsubsection{Áp dụng mã giảm giá}
+Khách hàng có thể nhập mã khuyến mãi khi thanh toán, hoặc lưu mã ở trang \textit{Ưu đãi} để tự áp ở bước thanh toán. Mã do quản lý tạo trong khu quản lý (ví dụ \texttt{BREW20}, \texttt{VNPAY20}, \texttt{FREESHIP}).
+
+Hệ thống kiểm tra tính hợp lệ, thời hạn, giới hạn lượt dùng và điều kiện áp dụng (đơn tối thiểu, phương thức thanh toán, hình thức nhận món). Nếu mã hợp lệ, số tiền giảm được tính lại ở backend.
+
+\subsubsection{Tích lũy và đổi điểm thưởng}
+Hệ thống cộng điểm sau khi đơn được thanh toán thành công theo quy tắc 1.000đ = 1 điểm. Khách theo dõi số điểm, lịch sử điểm, dùng điểm để thanh toán hoặc đổi quà (thêm topping, nâng size, bánh croissant, ly cà phê miễn phí, túi cà phê rang\ldots).
+
+\subsubsection{Thông báo, món yêu thích và góp ý}
+Khách nhận thông báo khi đơn đổi trạng thái (ví dụ đơn đã sẵn sàng) qua chuông thông báo trên đầu trang. Khách có thể thả tim để lưu món yêu thích theo tài khoản, và gửi góp ý cho quán từ trang \textit{Liên hệ}.
+
+\subsubsection{Quầy pha chế (vai trò nhân viên)}
+Nhân viên quầy xem hàng đợi gồm các đơn \texttt{PAID}, \texttt{PREPARING}, \texttt{READY}, chia làn theo trạng thái. Phiếu đơn đổi màu theo thời gian chờ, nhân viên tích từng món đã pha và bấm để chuyển đơn sang bước tiếp theo.
+
+Khi nhân viên bấm \textit{Bắt đầu pha}, hệ thống tự trừ nguyên liệu theo công thức (size S nhân 0,8; size L nhân 1,25). Quầy được cảnh báo khi nguyên liệu sắp hết hoặc đã hết. Nhân viên có thể hủy đơn đã thanh toán nhưng chưa pha, bắt buộc chọn lý do; hệ thống trả món về kho, hoàn điểm hoặc ghi giao dịch VNPay ``cần hoàn tiền'' và thông báo cho khách.
+
+\subsubsection{Quản lý cửa hàng (vai trò quản lý)}
+Khu quản lý gồm các mục:
+\begin{itemize}
+  \item \textbf{Tổng quan}: chọn kỳ xem (hôm nay, 7 ngày, 30 ngày), chỉ số doanh thu và số đơn có so sánh kỳ trước, biểu đồ doanh thu, món bán chạy, tỉ lệ phương thức thanh toán, đơn gần đây và cột việc cần xử lý.
+  \item \textbf{Thực đơn}: thêm món, sửa thông tin và giá, ẩn món, báo hết, sửa công thức; cột ``còn pha được'' tính từ công thức và tồn nguyên liệu.
+  \item \textbf{Mã giảm giá}: tạo, sửa, tạm dừng mã, theo dõi lượt dùng, chọn mã hiện trên trang Ưu đãi.
+  \item \textbf{Nội dung trang}: sửa bài chính trang nhất, ô ưu đãi, dải thông báo trên cùng, có bản xem trước.
+  \item \textbf{Tài khoản khách}: tìm, xem, thêm, khóa và mở khóa tài khoản khách kèm lý do; không có chức năng xóa tài khoản.
+  \item \textbf{Phản hồi}: đọc góp ý của khách, đánh dấu đang xử lý hoặc đã xong, ghi chú nội bộ.
+  \item \textbf{Nguyên liệu và nhập kho}: theo dõi tồn kho, mức tối thiểu, giá vốn; lập phiếu nhập kho (giá vốn tính lại theo bình quân).
+\end{itemize}
+
+Mọi thay đổi của quản lý (ẩn món, đổi giá, tạo mã) có hiệu lực ngay ở trang khách và API đặt đơn. Khu quản lý có ô tìm nhanh (Ctrl+K) để tìm món, mã, nguyên liệu, phản hồi và các mục.
+
+\newpage
+\subsection{Yêu cầu phi chức năng (Non-functional Requirements)}
+
+\subsubsection{Hiệu năng hệ thống}
+Hệ thống BrewLite cần đảm bảo tốc độ phản hồi nhanh và ổn định trong quá trình người dùng thao tác.
+
+Các chức năng như xem danh sách đồ uống, xem chi tiết sản phẩm và quản lý giỏ hàng cần được xử lý nhanh chóng. API được đặt mục tiêu phản hồi dưới 500ms trong môi trường kiểm thử thông thường. Trong lúc tải dữ liệu, giao diện hiển thị khung giữ chỗ (skeleton) thay vì trang trống.
+
+Khi chạy bộ kiểm thử Thunder Client trên máy phát triển, các API của luồng chính (thực đơn, tài khoản, đặt đơn, thanh toán) phản hồi trong khoảng 18--211ms, đạt mục tiêu đề ra.
+
+\anh{0.95\textwidth}{hinh/ui-hieu-nang.png}{Kết quả kiểm thử hiệu năng hệ thống}
+
+\subsubsection{Bảo mật hệ thống}
+Hệ thống phải đảm bảo an toàn thông tin cá nhân và dữ liệu của người sử dụng.
+\begin{itemize}
+  \item Mật khẩu được băm một chiều bằng bcrypt, tối thiểu 8 ký tự, có cả chữ và số; API không bao giờ trả về \texttt{passwordHash}.
+  \item Các chức năng yêu cầu đăng nhập dùng JWT. Token mang dấu lần đổi mật khẩu, nên đổi mật khẩu thì token cũ hết hiệu lực.
+  \item Phân quyền bằng \texttt{RolesGuard}: vai trò đọc từ cơ sở dữ liệu ở mỗi request; sai vai trò trả \texttt{403}.
+  \item Dữ liệu của ai người nấy xem: đơn và giao dịch của người khác trả \texttt{404}.
+  \item Chống dò mật khẩu: mỗi IP tối đa 10 lần/phút cho đăng nhập, đăng ký, đổi mật khẩu; vượt ngưỡng trả \texttt{429}.
+  \item Dữ liệu đầu vào được kiểm tra bằng \texttt{ValidationPipe}; trường lạ như giá, vai trò bị từ chối với lỗi \texttt{400} (tùy chọn \texttt{whitelist} và \texttt{forbidNonWhitelisted}).
+  \item Kết quả VNPay được kiểm tra chữ ký HMAC-SHA512 và số tiền.
+  \item Ứng dụng kết nối cơ sở dữ liệu bằng tài khoản chỉ được đọc/ghi dữ liệu, không xóa hay đổi cấu trúc bảng được; cơ sở dữ liệu có ràng buộc \texttt{CHECK} chặn tồn kho âm, điểm âm, tiền âm.
+\end{itemize}
+
+Đoạn mã dưới đây là bộ kiểm tra quyền dùng chung cho các API quầy và quản lý:
+
+\begin{figure}[H]
+\centering
+\begin{terminal}[0.95\textwidth]
+\begin{Verbatim}
+// backend/src/auth/roles.guard.ts
+canActivate(ctx: ExecutionContext): boolean {
+  const roles = this.reflector.getAllAndOverride<Role[] | undefined>(
+    ROLES_KEY, [ctx.getHandler(), ctx.getClass()]);
+  if (!roles?.length) return true;
+  const user = ctx.switchToHttp().getRequest<{ user?: User }>().user;
+  if (!user || !roles.includes(user.role)) {
+    throw new ForbiddenException('Bạn không có quyền dùng chức năng này');
+  }
+  return true;
+}
+
+// backend/src/staff/staff.controller.ts      -> chỉ nhân viên quầy
+@Controller('staff/orders') @Roles('STAFF')
+// backend/src/manage/manage.controller.ts    -> chỉ quản lý
+@Controller('staff') @Roles('MANAGER')
+// backend/src/orders/orders.controller.ts    -> chỉ khách hàng
+@Post() @CustomerOnly()
+\end{Verbatim}
+\end{terminal}
+\caption{Phân quyền theo vai trò bằng RolesGuard}
+\end{figure}
+
+Luồng quầy pha chế được kiểm thử bằng tài khoản nhân viên: nhân viên lấy được hàng đợi và chuyển đơn qua từng bước; yêu cầu chuyển tiếp một đơn đã hoàn thành bị máy trạng thái từ chối với lỗi \texttt{409}.
+
+\anh{0.95\textwidth}{hinh/ui-kiem-thu-phan-quyen.png}{Kết quả kiểm thử luồng quầy pha chế với tài khoản nhân viên}
+
+\subsubsection{Khả năng sử dụng}
+Giao diện BrewLite được thiết kế theo hướng đơn giản, trực quan và dễ sử dụng. Ứng dụng dùng Next.js với thiết kế ưu tiên thiết bị di động (Mobile-first): trên điện thoại có thanh điều hướng dưới cùng, trên máy tính có thanh mục lục dính đầu trang. Các thao tác thường dùng đều có phản hồi tức thì (thông báo ngắn, hiệu ứng món bay vào giỏ), và có trạng thái tải, trạng thái lỗi, trạng thái trống rõ ràng.
+
+\subsubsection{Tính toàn vẹn dữ liệu}
+Hệ thống phải đảm bảo tính chính xác và nhất quán của dữ liệu trong quá trình đặt hàng, thanh toán và pha chế.
+\begin{itemize}
+  \item Khi tạo đơn hàng, hệ thống dùng transaction và khóa lạc quan (optimistic locking theo cột \texttt{version}) để lưu đơn và trừ tồn kho nhất quán, kể cả khi nhiều khách đặt cùng lúc.
+  \item Tổng tiền đơn hàng được tính ở phía server, không tin giá từ trình duyệt.
+  \item Thanh toán dùng header \texttt{Idempotency-Key}: gửi lặp cùng một khóa chỉ tạo một giao dịch.
+  \item Mọi lần đổi trạng thái đơn đều đi qua máy trạng thái; chuyển tiếp không hợp lệ bị từ chối với lỗi \texttt{409}.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{terminal}[0.95\textwidth]
+\begin{Verbatim}
+// backend/src/orders/order-state-machine.ts
+export const ORDER_TRANSITIONS = {
+  PENDING:        ['PAID', 'PAYMENT_FAILED', 'CANCELLED'],
+  PAYMENT_FAILED: ['PENDING', 'CANCELLED'],
+  PAID:           ['PREPARING', 'CANCELLED'],
+  PREPARING:      ['READY'],
+  READY:          ['COMPLETED'],
+  COMPLETED:      [],
+  CANCELLED:      [],
+};
+\end{Verbatim}
+\end{terminal}
+\caption{Máy trạng thái đơn hàng}
+\end{figure}
+
+\anh{0.95\textwidth}{hinh/ui-kiem-thu-tich-hop.png}{Kết quả chạy integration test (Transaction, Idempotency, tồn kho)}
+
+\subsection{User Story}
+User Story mô tả các nhu cầu và mong muốn của người dùng khi tương tác với hệ thống BrewLite. Mỗi User Story được xây dựng từ góc nhìn của người sử dụng, nhằm xác định chức năng cần phát triển và giá trị mà chức năng đó mang lại.
+
+Bên cạnh đó, mỗi User Story đi kèm với các tiêu chí chấp nhận (Acceptance Criteria), giúp xác định điều kiện để một chức năng được xem là hoàn thành và đáp ứng yêu cầu.
+
+\subsubsection{US-01 - Xem danh mục đồ uống}
+\userstory{Là một khách truy cập, tôi muốn xem danh mục đồ uống, để biết các sản phẩm đang được bán tại BrewLite.}{
+  \item Khi truy cập trang thực đơn, hệ thống hiển thị danh sách sản phẩm từ API \texttt{GET /products}.
+  \item Mỗi sản phẩm hiển thị tên, giá, hình ảnh, số lượt bán và tình trạng tồn kho theo dữ liệu hệ thống.
+  \item Khách hàng có thể lọc theo nhóm, sắp xếp và tìm kiếm món (hỗ trợ gõ không dấu, chữ cái đầu).
+  \item Món bị quản lý ẩn không được trả về; món hết hàng hiển thị nhãn \textit{Hết hàng}.
+  \item Trong khi tải dữ liệu, hệ thống hiển thị trạng thái loading.
+  \item Nếu không có sản phẩm phù hợp, hệ thống hiển thị thông báo danh mục trống.
+  \item Nếu API gặp lỗi, hệ thống hiển thị thông báo lỗi và nút thử lại.
+}
+
+\subsubsection{US-02 - Xem chi tiết và tùy chỉnh đồ uống}
+\userstory{Là một khách hàng, tôi muốn xem chi tiết và tùy chỉnh đồ uống, để lựa chọn sản phẩm phù hợp với sở thích của mình.}{
+  \item Khi chọn một sản phẩm, hệ thống hiển thị thông tin chi tiết, mô tả, size, mức đường, mức đá và topping.
+  \item Khách hàng có thể chọn một size cho sản phẩm.
+  \item Khách hàng có thể chọn nhiều topping theo quy tắc của sản phẩm.
+  \item Khi thay đổi size hoặc topping, hệ thống cập nhật giá tạm tính tương ứng.
+  \item Nếu sản phẩm không tồn tại, hệ thống thông báo rằng không tìm thấy sản phẩm.
+}
+
+\subsubsection{US-03 - Quản lý giỏ hàng}
+\userstory{Là một khách hàng, tôi muốn thêm, cập nhật số lượng và xóa đồ uống trong giỏ hàng, để quản lý những sản phẩm mình muốn đặt.}{
+  \item Khi thêm một sản phẩm hợp lệ, sản phẩm được đưa vào giỏ hàng và số trên biểu tượng giỏ hàng tăng lên.
+  \item Khách hàng có thể cập nhật số lượng và sửa tùy chọn của sản phẩm trong giỏ hàng.
+  \item Khách hàng có thể xóa một sản phẩm khỏi giỏ hàng.
+  \item Hệ thống cập nhật tổng số lượng sản phẩm và tổng tiền sau mỗi thay đổi.
+  \item Giỏ hàng được lưu trên trình duyệt để duy trì dữ liệu khi tải lại trang.
+  \item Nếu giá món thay đổi hoặc món hết hàng, hệ thống báo cho khách trước khi thanh toán.
+  \item Khi giỏ hàng trống, hệ thống hiển thị thông báo phù hợp.
+}
+
+\subsubsection{US-04 - Đăng ký và đăng nhập tài khoản}
+\userstory{Là một người dùng, tôi muốn đăng ký và đăng nhập tài khoản, để sử dụng các chức năng phù hợp với vai trò của mình.}{
+  \item Khách hàng có thể đăng ký bằng họ tên, email và mật khẩu hợp lệ; số điện thoại không bắt buộc.
+  \item Hệ thống từ chối đăng ký nếu email đã được sử dụng (không phân biệt hoa thường).
+  \item Mật khẩu phải có ít nhất 8 ký tự, gồm cả chữ và số; mật khẩu xác nhận phải khớp.
+  \item Mật khẩu được băm bằng bcrypt trước khi lưu vào cơ sở dữ liệu.
+  \item Khi đăng nhập thành công, hệ thống trả về JWT và chuyển người dùng tới khu làm việc theo vai trò.
+  \item Đăng nhập sai quá 10 lần trong một phút từ cùng một IP bị chặn tạm thời (\texttt{429}).
+  \item Nếu thông tin đăng nhập không chính xác, hệ thống thông báo lỗi phù hợp; tài khoản bị khóa thấy lý do khóa.
+}
+
+\subsubsection{US-05 - Thanh toán online}
+\userstory{Là một khách hàng, tôi muốn thanh toán đơn hàng qua cổng VNPay hoặc bằng điểm thưởng, để hoàn tất việc mua đồ uống mà không cần sử dụng tiền mặt.}{
+  \item Khi giỏ hàng có ít nhất một sản phẩm, nút ``Thanh toán ngay'' hiển thị tổng tiền cần thanh toán.
+  \item Khách hàng có thể chọn phương thức VNPay (môi trường sandbox) hoặc Điểm BrewLite.
+  \item Khi chọn VNPay, hệ thống tạo link thanh toán có chữ ký HMAC-SHA512 và chuyển khách sang cổng VNPay.
+  \item Khi VNPay báo thành công, hệ thống kiểm tra chữ ký, số tiền và cập nhật đơn hàng sang trạng thái \texttt{PAID}.
+  \item Khi thanh toán thất bại hoặc khách hủy, hệ thống thông báo lý do và cho phép thanh toán lại an toàn; giỏ hàng được giữ nguyên.
+  \item Sau khi thanh toán thành công, hệ thống hiển thị mã đơn hàng, mã giao dịch VNPay, ngân hàng và màn hình xác nhận.
+  \item Hệ thống sử dụng \texttt{Idempotency-Key} để tránh xử lý lặp cùng một yêu cầu thanh toán.
+  \item Nếu kết quả chưa xác định, khách dùng chức năng ``Kiểm tra lại với VNPay'' để đối soát.
+}
+
+\subsubsection{US-06 - Tạo đơn hàng}
+\userstory{Là một khách hàng đã đăng nhập, tôi muốn tạo đơn hàng từ giỏ hàng, để đặt mua những đồ uống mình đã lựa chọn.}{
+  \item Chỉ tài khoản có vai trò khách hàng mới tạo được đơn; tài khoản nhân viên, quản lý nhận \texttt{403}.
+  \item Khách hàng phải có ít nhất một sản phẩm hợp lệ trong giỏ hàng.
+  \item Hệ thống kiểm tra thông tin sản phẩm, tồn kho và nguyên liệu trước khi tạo đơn; món bị ẩn hoặc báo hết bị từ chối.
+  \item Backend tự tính tổng tiền dựa trên dữ liệu hợp lệ của sản phẩm và các tùy chọn.
+  \item Hệ thống lưu thông tin đơn hàng và chi tiết đơn hàng trong cùng một transaction.
+  \item Nếu quá trình tạo đơn thất bại, hệ thống không để lại dữ liệu đơn hàng dở dang.
+  \item Đơn chưa thanh toán quá 30 phút được tự hủy và trả món về kho.
+}
+
+\subsubsection{US-07 - Xem lịch sử đơn hàng}
+\userstory{Là một khách hàng đã đăng nhập, tôi muốn xem lịch sử đơn hàng của mình, để theo dõi những lần đặt đồ uống trước đây.}{
+  \item Khách hàng có thể truy cập danh sách đơn hàng của mình, lọc theo trạng thái.
+  \item Mỗi đơn hàng hiển thị mã đơn, ngày đặt, các món đã đặt, tổng tiền và trạng thái.
+  \item Hệ thống chỉ trả về các đơn hàng thuộc về tài khoản đang đăng nhập.
+  \item Nếu khách hàng chưa có đơn hàng, hệ thống hiển thị thông báo phù hợp.
+  \item Nếu xảy ra lỗi khi tải lịch sử, hệ thống hiển thị thông báo lỗi.
+}
+
+\subsubsection{US-08 - Theo dõi và xem chi tiết đơn hàng}
+\userstory{Là một khách hàng đã đăng nhập, tôi muốn theo dõi và xem chi tiết đơn hàng, để biết khi nào món sẵn sàng và kiểm tra thông tin đơn.}{
+  \item Khách hàng có thể mở chi tiết một đơn hàng thuộc tài khoản của mình.
+  \item Hệ thống hiển thị mã đơn hàng, ngày đặt, danh sách sản phẩm, số lượng, giá và tổng tiền.
+  \item Trạng thái đơn tự cập nhật khi quầy chuyển bước, kèm thông báo khi đơn sẵn sàng.
+  \item Khách hàng có thể hủy đơn chưa thanh toán.
+  \item Nếu đơn hàng không tồn tại hoặc không thuộc quyền sở hữu của khách hàng, hệ thống trả \texttt{404} và không tiết lộ thông tin đơn.
+}
+
+\subsubsection{US-09 - Áp dụng mã giảm giá}
+\userstory{Là một khách hàng, tôi muốn áp dụng mã giảm giá cho đơn hàng, để được hưởng ưu đãi khi mua đồ uống.}{
+  \item Khách hàng có thể nhập mã khi thanh toán, hoặc lưu mã từ trang Ưu đãi để tự áp.
+  \item Hệ thống kiểm tra mã giảm giá có tồn tại, đang bật, còn hạn, còn lượt và đáp ứng điều kiện áp dụng hay không.
+  \item Nếu mã hợp lệ, hệ thống tính mức giảm theo quy tắc đã cấu hình (phần trăm, mức giảm tối đa, đơn tối thiểu, miễn phí giao).
+  \item Nếu mã không hợp lệ, tạm dừng hoặc hết hạn, hệ thống thông báo lý do và không áp dụng ưu đãi.
+  \item Backend tự tính lại tổng tiền sau giảm giá; tổng tiền không nhỏ hơn 0.
+}
+
+\subsubsection{US-10 - Tích lũy và đổi điểm thưởng}
+\userstory{Là một khách hàng đã đăng nhập, tôi muốn tích lũy điểm sau khi thanh toán và đổi điểm lấy quà, để nhận được quyền lợi từ chương trình khách hàng thân thiết.}{
+  \item Hệ thống ghi nhận điểm theo quy tắc 1.000đ = 1 điểm, chỉ khi đơn đã \texttt{PAID}.
+  \item Mỗi đơn hàng chỉ được cộng điểm một lần, kể cả khi Return URL và IPN của VNPay tới cùng lúc.
+  \item Điểm thưởng không được ghi nhận khi thanh toán thất bại; đơn bị quầy hủy thì điểm đã tích được thu lại.
+  \item Khách đổi được quà khi đủ điểm; số điểm không bao giờ âm.
+}
+
+\subsubsection{US-11 - Phân quyền theo vai trò}
+\userstory{Là chủ cửa hàng, tôi muốn mỗi tài khoản chỉ dùng được các chức năng thuộc vai trò của mình, để dữ liệu và thao tác của cửa hàng được an toàn.}{
+  \item Hệ thống có ba vai trò \texttt{CUSTOMER}, \texttt{STAFF}, \texttt{MANAGER}, lưu trong cơ sở dữ liệu.
+  \item Mọi vai trò đăng nhập ở cùng trang \texttt{/login} và được chuyển tới đúng khu làm việc.
+  \item API quầy chỉ cho nhân viên; API quản lý chỉ cho quản lý; API đặt đơn, thanh toán, đổi điểm chỉ cho khách. Gọi sai vai trò nhận \texttt{403}.
+  \item Không gửi token hoặc token không hợp lệ nhận \texttt{401}.
+  \item Người dùng không thể tự gán vai trò khi đăng ký; trường \texttt{role} gửi lên bị từ chối \texttt{400}.
+  \item Thay đổi vai trò hoặc khóa tài khoản có hiệu lực ngay ở request kế tiếp.
+}
+
+\subsubsection{US-12 - Xử lý đơn tại quầy pha chế}
+\userstory{Là một nhân viên quầy, tôi muốn xem hàng đợi đơn đã thanh toán và chuyển đơn qua các bước pha chế, để phục vụ khách đúng thứ tự và khách biết khi nào món xong.}{
+  \item Hàng đợi chỉ gồm các đơn \texttt{PAID}, \texttt{PREPARING}, \texttt{READY}, chia làn theo trạng thái.
+  \item Nhân viên bấm để chuyển đơn sang bước kế tiếp; bước không hợp lệ bị máy trạng thái từ chối (\texttt{409}).
+  \item Khi bắt đầu pha, nguyên liệu được trừ theo công thức và size.
+  \item Quầy thấy cảnh báo khi nguyên liệu sắp hết hoặc đã hết.
+  \item Nhân viên hủy được đơn đã thanh toán nhưng chưa pha, bắt buộc có lý do; đơn đang pha không hủy được.
+  \item Khi hủy, hệ thống trả món về kho, hoàn điểm hoặc ghi giao dịch cần hoàn tiền, và thông báo cho khách kèm lý do.
+}
+
+\subsubsection{US-13 - Quản lý thực đơn}
+\userstory{Là một quản lý cửa hàng, tôi muốn thêm món, đổi giá, ẩn món và báo hết, để thực đơn trên ứng dụng luôn đúng với thực tế của quán.}{
+  \item Quản lý có thể thêm món mới và sửa tên, mô tả, giá, ảnh, nhóm món.
+  \item Món bị ẩn không hiện ở trang khách và không đặt được qua API.
+  \item Món báo hết vẫn hiện nhưng không đặt được; mở bán lại giữ nguyên số tồn cũ.
+  \item Giá không được âm; ảnh món chỉ nhận link \texttt{https} hoặc ảnh JPG, PNG, WEBP.
+  \item Quản lý sửa được công thức món; hệ thống tính giá vốn mỗi ly và số ly còn pha được.
+  \item Thay đổi có hiệu lực ngay ở trang khách và giỏ hàng.
+}
+
+\subsubsection{US-14 - Quản lý mã giảm giá và nội dung trang}
+\userstory{Là một quản lý cửa hàng, tôi muốn tạo mã giảm giá và sửa nội dung trang chủ, để chạy chương trình khuyến mãi mà không cần sửa mã nguồn.}{
+  \item Quản lý có thể tạo, sửa, tạm dừng mã giảm giá và đặt điều kiện áp dụng.
+  \item Quản lý theo dõi được số lượt dùng của từng mã; mã đã có người dùng không xóa, không đổi tên được.
+  \item Quản lý chọn mã nào hiển thị trên trang Ưu đãi của khách.
+  \item Quản lý sửa được bài chính trang nhất, ô ưu đãi và dải thông báo, có bản xem trước trước khi lưu.
+  \item Liên kết trong dải thông báo chỉ được trỏ tới trang nội bộ của BrewLite.
+}
+
+\subsubsection{US-15 - Quản lý tài khoản khách}
+\userstory{Là một quản lý cửa hàng, tôi muốn tìm và khóa tài khoản khách vi phạm, để bảo vệ cửa hàng và các khách hàng khác.}{
+  \item Quản lý tìm được khách theo tên, email hoặc số điện thoại, xem thông tin và lịch sử khóa.
+  \item Khóa và mở khóa bắt buộc chọn lý do; lịch sử ghi lại ai thao tác và vì sao.
+  \item Khách bị khóa bị đăng xuất ở request kế tiếp và thấy lý do khi đăng nhập.
+  \item Hệ thống không có chức năng xóa tài khoản khách.
+}
+
+\subsubsection{US-16 - Quản lý kho nguyên liệu}
+\userstory{Là một quản lý cửa hàng, tôi muốn theo dõi tồn kho nguyên liệu và nhập kho, để quán không bị hết nguyên liệu giữa ca.}{
+  \item Quản lý xem được danh sách nguyên liệu, tồn kho, mức tối thiểu và giá vốn; lọc được nguyên liệu sắp hết.
+  \item Quản lý lập phiếu nhập kho; tồn kho tăng ngay và giá vốn tính lại theo bình quân.
+  \item Lịch sử nhập kho và xuất pha chế của từng nguyên liệu được lưu lại.
+  \item Khi nguyên liệu không đủ, món liên quan hiện \textit{Hết hàng} ở trang khách và đặt qua API bị từ chối.
+}
+
+\subsubsection{US-17 - Xem tổng quan kinh doanh}
+\userstory{Là một quản lý cửa hàng, tôi muốn xem doanh thu, số đơn và món bán chạy, để nắm tình hình kinh doanh của quán.}{
+  \item Quản lý chọn được kỳ xem: hôm nay, 7 ngày, 30 ngày.
+  \item Hệ thống hiển thị doanh thu, số đơn có so sánh với kỳ trước, biểu đồ doanh thu, món bán chạy và tỉ lệ phương thức thanh toán.
+  \item Số liệu tính từ đơn thật; đơn bị hủy không được tính.
+  \item Nhân viên quầy và khách gọi API tổng quan nhận \texttt{403}.
+}
+
+% =====================================================================
+\section{GIAO DIỆN ỨNG DỤNG}
+% =====================================================================
+\subsection{Tổng quan thiết kế giao diện}
+Giao diện BrewLite được thiết kế lại toàn bộ theo phong cách \textbf{``tờ báo Sài Gòn xưa''}: nền giấy ngà, chữ mực đen, điểm nhấn mực đỏ như con dấu in, góc vuông như trang báo in. Trang chủ được trình bày như trang nhất một tờ báo, có măng-sét (tên báo, thứ và ngày), bài chính, cột ``được gọi nhiều hôm nay'' và các ``con tem'' ưu đãi.
+
+\begin{table}[H]
+\centering
+\caption{Bộ màu và phông chữ của giao diện mới}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Thành phần} & \textbf{Giá trị} & \textbf{Dùng cho} \\ \hline
+Mực đen   & \texttt{\#1b1712} & Chữ chính, màu thương hiệu \\ \hline
+Giấy báo  & \texttt{\#efe7d4} & Nền trang \\ \hline
+Giấy sáng & \texttt{\#f7f1e3} & Nền ô, khung, hộp thoại \\ \hline
+Mực đỏ    & \texttt{\#b3261e} & Nút chính, con dấu trạng thái, lỗi \\ \hline
+Xanh lá   & \texttt{\#2f5d3a} & Trạng thái thành công \\ \hline
+Playfair Display & Phông tít & Tên báo, tiêu đề lớn \\ \hline
+Lora      & Phông thân bài & Đoạn văn, mô tả món \\ \hline
+Oswald    & Phông nhãn & Nhãn mục, nút, thanh điều hướng \\ \hline
+IBM Plex Mono & Phông ``máy đánh chữ'' & Giá tiền, mã đơn \\ \hline
+\end{tabularx}
+\end{table}
+
+Khu nội bộ (Quầy pha chế, Quản lý cửa hàng) có khung riêng với thanh trên cùng màu mực, tách hẳn khỏi giao diện của khách để nhân viên không nhầm khu.
+
+Các màn hình chính của ứng dụng bao gồm:
+\begin{itemize}
+  \item Phía khách hàng: đăng nhập, đăng ký, trang chủ, thực đơn, chi tiết sản phẩm, giỏ hàng, thanh toán, cổng VNPay, thanh toán thành công, theo dõi đơn, lịch sử đơn hàng, lịch sử giao dịch, tài khoản, ưu đãi, liên hệ.
+  \item Phía nhân viên: quầy pha chế.
+  \item Phía quản lý: tổng quan, thực đơn, mã giảm giá, nội dung trang, tài khoản khách, phản hồi, nguyên liệu, nhập kho.
+\end{itemize}
+
+\subsection{Giao diện đăng nhập}
+Màn hình đăng nhập dùng chung cho mọi vai trò. Trên máy tính, bên trái là ảnh lớn, bên phải là biểu mẫu.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Ô nhập email đăng nhập.
+  \item Ô nhập mật khẩu (có nút hiện/ẩn mật khẩu).
+  \item Nút đăng nhập.
+  \item Liên kết chuyển sang trang đăng ký.
+  \item Sau khi đăng nhập, tự chuyển tới khu làm việc theo vai trò.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-01-dang-nhap.png}{Giao diện đăng nhập BrewLite}
+
+\subsection{Giao diện đăng ký}
+Màn hình đăng ký hỗ trợ khách tạo tài khoản mới và nhận điểm chào mừng.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Nhập họ và tên, email, số điện thoại (không bắt buộc).
+  \item Nhập và xác nhận mật khẩu, có thanh báo độ mạnh mật khẩu.
+  \item Ô đồng ý điều khoản sử dụng và chính sách bảo mật.
+  \item Nút tạo tài khoản.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-02-dang-ky.png}{Giao diện đăng ký tài khoản}
+
+\subsection{Giao diện trang chủ}
+Trang chủ được trình bày như trang nhất một tờ báo.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Măng-sét: tên BrewLite, thứ và ngày hôm nay, thanh mục lục (Thực đơn, Ưu đãi, Đơn của tôi, Câu chuyện, Liên hệ), ô tìm kiếm, giỏ hàng, chuông thông báo.
+  \item Dải thông báo trên cùng và bài chính do quản lý đặt.
+  \item Cột ``được gọi nhiều hôm nay'' và các con tem ưu đãi, thành viên.
+  \item Món bán chạy và thực đơn theo nhóm.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-03-trang-chu.png}{Giao diện trang chủ BrewLite}
+
+\subsection{Giao diện thực đơn}
+Màn hình thực đơn liệt kê các món dưới dạng thẻ ``tin rao'' trên báo.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Bộ lọc theo nhóm món và món yêu thích.
+  \item Sắp xếp và ô tìm kiếm có gợi ý.
+  \item Thẻ món: ảnh, tên, giá, nhãn hết hàng, nút \textbf{+} để thêm nhanh vào giỏ.
+  \item Chia trang danh sách món.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-04-thuc-don.png}{Giao diện thực đơn}
+
+\subsection{Giao diện chi tiết sản phẩm}
+Màn hình chi tiết sản phẩm có ảnh lớn bên trái, bộ chọn tùy chọn bên phải và gợi ý món cùng loại bên dưới.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Hình ảnh, tên, mô tả và giá bán.
+  \item Chọn size (S, M, L), mức đường, mức đá, topping, ghi chú và số lượng.
+  \item Nút thêm vào giỏ hàng và nút lưu món yêu thích.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-05-chi-tiet-mon.png}{Giao diện chi tiết sản phẩm}
+
+\subsection{Giao diện giỏ hàng}
+Giỏ hàng nhanh trượt ra từ cạnh phải, cho phép khách kiểm tra và điều chỉnh các sản phẩm trước khi đặt hàng.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Danh sách sản phẩm đã chọn kèm tùy chọn.
+  \item Số lượng, đơn giá và thành tiền.
+  \item Chức năng sửa và xóa sản phẩm.
+  \item Tổng giá trị đơn hàng và nút thanh toán.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-06-gio-hang.png}{Giao diện giỏ hàng}
+
+\subsection{Giao diện thanh toán}
+Màn hình thanh toán cho phép khách hàng kiểm tra thông tin đơn hàng và lựa chọn phương thức thanh toán.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Hình thức nhận món (đến lấy tại quầy hoặc giao tận nơi) và thời gian lấy.
+  \item Ô nhập mã giảm giá và các mã đã lưu.
+  \item Phương thức thanh toán: VNPay hoặc Điểm BrewLite.
+  \item Tổng tiền do máy chủ báo giá.
+  \item Nút xác nhận thanh toán.
+\end{itemize}
+
+Sau khi giao dịch được xử lý, hệ thống hiển thị thông báo thành công hoặc thất bại tương ứng với kết quả thực tế từ VNPay.
+
+\anhdoi{0.95\textwidth}{hinh/ui-07a-thanh-toan.png}{0.5\textwidth}{hinh/ui-07b-thanh-toan-that-bai.png}{Giao diện thanh toán và thanh toán không thành công}
+
+\subsection{Giao diện thanh toán qua cổng VNPay (Sandbox)}
+Khi khách hàng chọn VNPay và bấm xác nhận, backend BrewLite tạo đường dẫn thanh toán có chữ ký HMAC-SHA512 và chuyển trình duyệt sang cổng VNPay. Đề tài dùng môi trường sandbox của VNPay: giao diện và luồng xử lý giống cổng thật nhưng chỉ chấp nhận thẻ thử nghiệm và không trừ tiền thật.
+
+\anh{0.85\textwidth}{hinh/07c-trang-thanh-toan-sandbox.png}{Màn hình chọn phương thức thanh toán trên cổng VNPay sandbox}
+
+\anh{0.85\textwidth}{hinh/07d-thanh-toan-qua-ngan-hang.png}{Màn hình nhập thông tin thẻ ngân hàng NCB trên VNPay sandbox}
+
+\begin{table}[H]
+\centering
+\caption{Thẻ thử nghiệm VNPay sandbox}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Thông tin} & \textbf{Giá trị} \\ \hline
+Ngân hàng          & NCB \\ \hline
+Số thẻ             & 9704198526191432198 \\ \hline
+Tên chủ thẻ        & NGUYEN VAN A \\ \hline
+Ngày phát hành     & 07/15 \\ \hline
+Mật khẩu OTP       & 123456 \\ \hline
+\end{tabular}
+\end{table}
+
+Khi giao dịch kết thúc, VNPay gửi kết quả về BrewLite qua Return URL (trình duyệt) và IPN (máy chủ gọi máy chủ). Hệ thống kiểm tra chữ ký \texttt{vnp\_SecureHash}, so sánh số tiền, đọc mã phản hồi \texttt{vnp\_ResponseCode} (\texttt{00} là thành công), rồi cập nhật đơn và cộng điểm đúng một lần.
+
+\subsection{Giao diện thanh toán thành công}
+Màn hình xác nhận cho khách hàng rằng đơn hàng đã được thanh toán thành công.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Trạng thái thành công của đơn hàng (kèm hiệu ứng pháo giấy).
+  \item Mã đơn hàng và số tiền thanh toán.
+  \item Mã giao dịch VNPay, ngân hàng và thời gian thanh toán.
+  \item Điểm tích lũy.
+  \item Nút theo dõi đơn hàng.
+\end{itemize}
+
+\anh{0.55\textwidth}{hinh/ui-08-thanh-toan-thanh-cong.png}{Giao diện thanh toán thành công}
+
+\subsection{Giao diện theo dõi đơn hàng}
+Màn hình theo dõi đơn hiển thị tiến trình đơn theo máy trạng thái của backend và tự cập nhật khi quầy chuyển bước.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Mã đơn để đọc tại quầy khi nhận món.
+  \item Các bước: đã thanh toán, đang pha chế, sẵn sàng lấy món, hoàn thành.
+  \item Danh sách món, tổng tiền, nút xem hóa đơn.
+  \item Nút hủy đơn (khi đơn chưa thanh toán) và thông tin quán.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-09-theo-doi-don.png}{Giao diện theo dõi đơn hàng}
+
+\subsection{Giao diện lịch sử đơn hàng}
+Màn hình ``Đơn của tôi'' giúp khách theo dõi các đơn đã đặt.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Đơn đang pha nổi lên đầu kèm tiến độ.
+  \item Tab theo trạng thái, danh sách chia theo ngày (Hôm nay, Hôm qua\ldots).
+  \item Mã đơn, ngày đặt, tổng giá trị và con dấu trạng thái.
+\end{itemize}
+
+\anh{0.8\textwidth}{hinh/ui-10-lich-su-don.png}{Giao diện lịch sử đơn hàng}
+
+\subsection{Giao diện lịch sử giao dịch}
+Màn hình lịch sử giao dịch trình bày như sao kê ngân hàng.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Tab Thành công và Chưa thành công, chia theo ngày.
+  \item Mỗi dòng: số tiền, phương thức, mã đơn, thời gian.
+  \item Chi tiết giao dịch và nút \textit{Kiểm tra lại với VNPay}.
+\end{itemize}
+
+\anh{0.85\textwidth}{hinh/ui-11-lich-su-giao-dich.png}{Giao diện lịch sử giao dịch}
+
+\subsection{Giao diện tài khoản và ưu đãi}
+Trang tài khoản hiển thị thẻ thành viên, số điểm, giao dịch gần đây, lịch sử đơn, quà đổi được, lịch sử điểm và đổi mật khẩu. Trang Ưu đãi liệt kê các mã giảm giá đang chạy để khách lưu lại và các quà đổi bằng điểm.
+
+\anhdoi{0.85\textwidth}{hinh/ui-12a-tai-khoan.png}{0.85\textwidth}{hinh/ui-12b-uu-dai.png}{Giao diện tài khoản và trang Ưu đãi}
+
+\subsection{Giao diện quầy pha chế (nhân viên)}
+Màn hình quầy pha chế chỉ dành cho tài khoản nhân viên. Tài khoản khác mở trang này sẽ thấy thông báo không có quyền.
+
+Các thành phần chính:
+\begin{itemize}
+  \item Phiếu đơn chia ba làn: Mới (đã thanh toán), Đang pha, Sẵn sàng.
+  \item Phiếu đổi màu theo thời gian chờ; tích từng món đã pha.
+  \item Nút chuyển bước: \textit{Bắt đầu pha}, \textit{Pha xong}, \textit{Đã giao khách}.
+  \item Ô tìm đơn theo mã, cột tổng món cần pha và đơn vừa giao.
+  \item Cảnh báo nguyên liệu sắp hết, nút hủy đơn có lý do.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-13-quay-pha-che.png}{Giao diện quầy pha chế}
+
+\subsection{Giao diện khu quản lý cửa hàng}
+Khu quản lý có thanh mục chia nhóm bên trái (Cửa hàng, Khách hàng, Kho) trên máy tính, hoặc hàng tab cuộn ngang trên điện thoại. Cạnh mỗi mục có số việc đang chờ quản lý xử lý.
+
+\subsubsection{Tổng quan}
+Các thành phần chính:
+\begin{itemize}
+  \item Chọn kỳ xem: hôm nay, 7 ngày, 30 ngày.
+  \item Bốn chỉ số có so sánh với kỳ trước và biểu đồ doanh thu.
+  \item Cột ``Cần xử lý'', món bán chạy, doanh thu theo cách thanh toán, đơn gần đây.
+\end{itemize}
+
+\anh{0.95\textwidth}{hinh/ui-14-quan-ly-tong-quan.png}{Giao diện tổng quan của quản lý}
+
+\subsubsection{Quản lý thực đơn}
+Bảng món có chia trang và lọc theo trạng thái (đang bán, ẩn, hết hàng). Khung sửa món có hai thẻ: thông tin món và công thức (định lượng nguyên liệu, giá vốn mỗi ly, lãi gộp).
+
+\anh{0.95\textwidth}{hinh/ui-15-quan-ly-thuc-don.png}{Giao diện quản lý thực đơn}
+
+\subsubsection{Quản lý mã giảm giá và nội dung trang}
+Quản lý tạo, sửa, tạm dừng mã giảm giá và theo dõi lượt dùng. Trang nội dung cho sửa bài chính trang nhất, ô ưu đãi và dải thông báo, mỗi phần có bản xem trước ngay bên cạnh.
+
+\anhdoi{0.9\textwidth}{hinh/ui-16a-ma-giam-gia.png}{0.9\textwidth}{hinh/ui-16b-noi-dung-trang.png}{Giao diện quản lý mã giảm giá và nội dung trang}
+
+\subsubsection{Quản lý tài khoản khách và phản hồi}
+Trang tài khoản khách có ô số liệu bấm để lọc, bảng chia trang và hộp thoại chi tiết (thông tin, lịch sử khóa), nút khóa và mở khóa có lý do. Trang phản hồi có danh sách thư góp ý bên trái và nội dung bên phải, cho đánh dấu đang xử lý hoặc đã xong và ghi chú nội bộ.
+
+\anhdoi{0.9\textwidth}{hinh/ui-17a-tai-khoan-khach.png}{0.9\textwidth}{hinh/ui-17b-phan-hoi.png}{Giao diện quản lý tài khoản khách và phản hồi}
+
+\subsubsection{Nguyên liệu và nhập kho}
+Trang nguyên liệu hiển thị tồn kho, mức tối thiểu, giá vốn và nhãn trạng thái tồn; bấm một dòng để sửa và xem lịch sử nhập, xuất. Trang nhập kho cho lập phiếu nhập với số lượng và giá mua từng nguyên liệu.
+
+\anhdoi{0.9\textwidth}{hinh/ui-18a-nguyen-lieu.png}{0.9\textwidth}{hinh/ui-18b-nhap-kho.png}{Giao diện nguyên liệu và nhập kho}
+
+\end{document}

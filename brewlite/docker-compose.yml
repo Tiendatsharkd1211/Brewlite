@@ -1,16 +1,18 @@
 # Chạy toàn bộ BrewLite: docker compose up --build
 #   Frontend  http://localhost:3000
 #   Backend   http://localhost:3001  (GET /health để kiểm tra)
-#   Postgres  localhost:5433 (user/pass/db: brewlite)
+#   Postgres  127.0.0.1:5433, chỉ máy này kết nối được (chủ CSDL: brewlite, app: brewlite_app)
+# Backend cần JWT_SECRET trong file .env đặt cạnh file này (xem README)
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: brewlite
-      POSTGRES_PASSWORD: brewlite
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:-brewlite}
       POSTGRES_DB: brewlite
+    # Chỉ mở cho 127.0.0.1: máy khác trong mạng LAN không kết nối thẳng vào CSDL được
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata_v3:/var/lib/postgresql/data
     healthcheck:
@@ -23,8 +25,10 @@ services:
     build: ./backend
     environment:
       PORT: 3001
-      DATABASE_URL: postgresql://brewlite:brewlite@db:5432/brewlite?schema=public
-      JWT_SECRET: ${JWT_SECRET:-doi-chuoi-nay-khi-trien-khai-that}
+      DIRECT_URL: postgresql://brewlite:${DB_OWNER_PASSWORD:-brewlite}@db:5432/brewlite?schema=public
+      DATABASE_URL: postgresql://brewlite_app:${DB_APP_PASSWORD:-brewlite_app_dev}@db:5432/brewlite?schema=public
+      # Lấy từ file .env cạnh file này; thiếu hoặc yếu thì backend từ chối khởi động (xem README)
+      JWT_SECRET: ${JWT_SECRET:-}
       FRONTEND_URL: http://localhost:3000
       # Mã VNPay sandbox: ghi vào file .env đặt cạnh docker-compose.yml (VNP_TMN_CODE=..., VNP_HASH_SECRET=...)
       VNP_TMN_CODE: ${VNP_TMN_CODE:-}
@@ -40,6 +44,7 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3001
+        NEXT_PUBLIC_SHOW_DEMO_HINTS: ${SHOW_DEMO_HINTS:-}
     ports:
       - "3000:3000"
     depends_on:

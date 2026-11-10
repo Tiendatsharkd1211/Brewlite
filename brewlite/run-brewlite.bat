@@ -51,7 +51,8 @@ echo PostgreSQL da san sang.
 :envfiles
 rem --- 3. Tao file moi truong; them bien con thieu vao file cu ---
 if not exist "backend\.env" copy "backend\.env.example" "backend\.env" >nul
-findstr /b /c:"DATABASE_URL=" "backend\.env" >nul || >> "backend\.env" echo DATABASE_URL=postgresql://brewlite:brewlite@localhost:5433/brewlite?schema=public
+findstr /b /c:"DIRECT_URL=" "backend\.env" >nul || >> "backend\.env" echo DIRECT_URL=postgresql://brewlite:brewlite@localhost:5433/brewlite?schema=public
+findstr /b /c:"DATABASE_URL=" "backend\.env" >nul || >> "backend\.env" echo DATABASE_URL=postgresql://brewlite_app:brewlite_app_dev@localhost:5433/brewlite?schema=public
 findstr /b /c:"JWT_SECRET=" "backend\.env" >nul || >> "backend\.env" echo JWT_SECRET=doi-chuoi-nay-thanh-mot-chuoi-bi-mat-dai
 findstr /b /c:"VNP_TMN_CODE=" "backend\.env" >nul || (>> "backend\.env" echo VNP_TMN_CODE=& >> "backend\.env" echo VNP_HASH_SECRET=)
 findstr /r /b /c:"VNP_TMN_CODE=." "backend\.env" >nul
@@ -76,6 +77,8 @@ rem --- 5. Tao bang trong CSDL va nap du lieu mau ---
 echo Dang tao bang va nap du lieu mau...
 pushd backend
 call npx prisma db push --skip-generate
+if errorlevel 1 ( popd & goto dbfail )
+call npm run db:harden
 if errorlevel 1 ( popd & goto dbfail )
 call npm run seed
 if errorlevel 1 ( popd & goto dbfail )
@@ -131,7 +134,7 @@ if not defined BE_OK (
   echo [CANH BAO] Sau 3 phut backend van chua chay. Xem loi trong cua so "BrewLite Backend".
 )
 echo BrewLite dang chay:  frontend http://localhost:3000   backend http://localhost:3001
-echo Tai khoan demo: demo@brewlite.vn / Brewlite123
+echo Tai khoan demo: demo@brewlite.vn, nhan vien staff@brewlite.vn (mat khau Brewlite123)
 echo Muon tat: dong 2 cua so "BrewLite Backend" va "BrewLite Frontend".
 pause
 exit /b 0

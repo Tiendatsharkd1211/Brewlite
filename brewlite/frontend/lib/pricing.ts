@@ -1,6 +1,6 @@
-// Tính giá TẠM TÍNH trên giao diện cho người dùng xem trước. Backend luôn tính lại khi tạo đơn.
+// Tính giá TẠM TÍNH trên giao diện (thêm món vào giỏ). Mã giảm giá và tổng tiền thật do máy chủ báo giá (lib/quote.ts).
 import { SIZES, TOPPINGS } from './mock-data';
-import type { Fulfillment, OrderStatus, PaymentMethodId, Product, SizeId } from './types';
+import type { OrderStatus, Product, SizeId } from './types';
 
 export const DELIVERY_FEE = 15000;
 /** 1 điểm BrewLite = 100đ khi thanh toán */
@@ -14,31 +14,7 @@ export function unitPriceOf(product: Product, size: SizeId | null, toppingIds: s
   return product.price + sizeExtra + toppings;
 }
 
-export type VoucherResult =
-  | { ok: true; code: string; label: string; discount: number; freeShip: boolean }
-  | { ok: false; code: string; message: string };
-
-export const VOUCHER_HINT = 'Mã thử nghiệm: BREW20, VNPAY20, FREESHIP';
-
-/** Xem trước mã giảm giá (luật giống backend: bảng Voucher trong CSDL) */
-export function applyVoucher(raw: string, subtotal: number, fulfillment: Fulfillment, method: PaymentMethodId | null): VoucherResult {
-  const code = raw.trim().toUpperCase();
-  if (!code) return { ok: false, code, message: 'Nhập mã ưu đãi trước khi áp dụng.' };
-
-  if (code === 'BREW20') {
-    if (subtotal < 50000) return { ok: false, code, message: 'BREW20 áp dụng cho đơn từ 50.000đ.' };
-    return { ok: true, code, label: 'Giảm 20%, tối đa 20.000đ', discount: Math.min(Math.round(subtotal * 0.2), 20000), freeShip: false };
-  }
-  if (code === 'VNPAY20') {
-    if (method !== 'VNPAY') return { ok: false, code, message: 'VNPAY20 chỉ áp dụng khi thanh toán qua VNPay.' };
-    return { ok: true, code, label: 'Giảm 20% khi trả qua VNPay, tối đa 25.000đ', discount: Math.min(Math.round(subtotal * 0.2), 25000), freeShip: false };
-  }
-  if (code === 'FREESHIP') {
-    if (fulfillment !== 'delivery') return { ok: false, code, message: 'FREESHIP chỉ dùng cho đơn giao tận nơi.' };
-    return { ok: true, code, label: 'Miễn phí giao hàng', discount: 0, freeShip: true };
-  }
-  return { ok: false, code, message: `Mã ${code} không tồn tại hoặc đã hết hạn.` };
-}
+export const VOUCHER_HINT = 'Mỗi đơn dùng được một mã. Xem mã đang có ở mục Ưu đãi.';
 
 export function pointsEarnedFor(paidByMoney: number): number {
   return Math.floor(paidByMoney / EARN_PER_VND);

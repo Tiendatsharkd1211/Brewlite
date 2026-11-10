@@ -20,21 +20,24 @@ function strengthOf(pw: string) {
   return { score, label: labels[score], color: colors[score] };
 }
 
-type Field = 'fullName' | 'email' | 'password' | 'confirmPassword' | 'agree';
+type Field = 'fullName' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'agree';
 
 export default function RegisterForm({ next }: { next: string }) {
   const router = useRouter();
   const { register } = useAuth();
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ fullName: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [agree, setAgree] = useState(false);
-  const [touched, setTouched] = useState<Record<Field, boolean>>({ fullName: false, email: false, password: false, confirmPassword: false, agree: false });
+  const [touched, setTouched] = useState<Record<Field, boolean>>({ fullName: false, email: false, phone: false, password: false, confirmPassword: false, agree: false });
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const strength = strengthOf(form.password);
+  const phoneDigits = form.phone.replace(/[\s.-]/g, '');
   const errors: Record<Field, string | null> = {
     fullName: form.fullName.trim().length < 2 ? 'Nhập họ tên, ít nhất 2 ký tự' : null,
     email: !form.email.trim() ? 'Nhập email' : !EMAIL_RE.test(form.email.trim()) ? 'Email chưa đúng định dạng, ví dụ ten@gmail.com' : null,
+    // Không bắt buộc; có nhập thì phải đúng 10 số, bắt đầu bằng 0 (cho phép dấu cách, dấu chấm)
+    phone: phoneDigits && !/^0\d{9}$/.test(phoneDigits) ? 'Số điện thoại gồm 10 chữ số, bắt đầu bằng 0' : null,
     password:
       form.password.length < 8 ? 'Mật khẩu cần ít nhất 8 ký tự' : !(/[A-Za-z]/.test(form.password) && /\d/.test(form.password)) ? 'Mật khẩu cần có cả chữ và số' : null,
     confirmPassword: !form.confirmPassword ? 'Nhập lại mật khẩu' : form.confirmPassword !== form.password ? 'Mật khẩu nhập lại chưa khớp' : null,
@@ -46,12 +49,13 @@ export default function RegisterForm({ next }: { next: string }) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setTouched({ fullName: true, email: true, password: true, confirmPassword: true, agree: true });
+    setTouched({ fullName: true, email: true, phone: true, password: true, confirmPassword: true, agree: true });
     if (Object.values(errors).some(Boolean)) return;
     setSubmitting(true);
     setServerError(null);
     try {
-      await register({ ...form, fullName: form.fullName.trim(), email: form.email.trim() });
+      const { phone: _phone, ...rest } = form;
+      await register({ ...rest, fullName: form.fullName.trim(), email: form.email.trim(), ...(phoneDigits ? { phone: phoneDigits } : {}) });
       router.replace(next);
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : 'Chưa tạo được tài khoản, thử lại sau ít phút.');
@@ -74,6 +78,17 @@ export default function RegisterForm({ next }: { next: string }) {
         )}
         <TextField id="reg-name" label="Họ và tên" autoComplete="name" placeholder="Nguyễn Văn A" value={form.fullName} onChange={set('fullName')} onBlur={touch('fullName')} error={show('fullName')} />
         <TextField id="reg-email" label="Email" type="email" autoComplete="email" placeholder="ten@gmail.com" value={form.email} onChange={set('email')} onBlur={touch('email')} error={show('email')} />
+        <TextField
+          id="reg-phone"
+          label="Số điện thoại (không bắt buộc)"
+          type="tel"
+          autoComplete="tel"
+          placeholder="0912 345 678"
+          value={form.phone}
+          onChange={set('phone')}
+          onBlur={touch('phone')}
+          error={show('phone')}
+        />
         <PasswordField
           id="reg-password"
           label="Mật khẩu"

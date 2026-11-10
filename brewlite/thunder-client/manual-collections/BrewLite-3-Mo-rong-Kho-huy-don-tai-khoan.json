@@ -1,0 +1,931 @@
+{
+  "client": "Thunder Client",
+  "clientName": "Thunder Client",
+  "collectionName": "BrewLite mở rộng 3 - Kho, Huỷ đơn, Tài khoản khách",
+  "collectionId": "5483a51f-10b4-4ee9-8bd2-6f3ae3f2f8f9",
+  "dateExported": "2026-11-03T12:00:00.000Z",
+  "version": "1.2",
+  "folders": [
+    {
+      "_id": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "10. Quản lý: kho nguyên liệu",
+      "containerId": "",
+      "created": "2026-11-07T12:00:00.000Z",
+      "sortNum": 100000
+    },
+    {
+      "_id": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "11. Quầy huỷ đơn đã thanh toán",
+      "containerId": "",
+      "created": "2026-11-07T12:00:00.000Z",
+      "sortNum": 110000
+    },
+    {
+      "_id": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "12. Khoá tài khoản khách và đơn của người khác",
+      "containerId": "",
+      "created": "2026-11-07T12:00:00.000Z",
+      "sortNum": 120000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "f4fd3007-ca5a-506d-a632-bcf7cca05817",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Xem kho: nguyên liệu, công thức, phiếu nhập",
+      "url": "http://localhost:3001/staff/inventory",
+      "method": "GET",
+      "sortNum": 620000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "c7af2b4f-fa44-58b2-adaa-1afea1a31eb0",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Nhập kho 5 gói bánh quy (tạo phiếu PN…)",
+      "url": "http://localhost:3001/staff/receipts",
+      "method": "POST",
+      "sortNum": 630000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "201"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"lines\": [\n    {\n      \"ingredientId\": \"banh-quy\",\n      \"qty\": 5,\n      \"price\": 18000\n    }\n  ],\n  \"note\": \"Nhập thử từ Thunder Client\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "57cdbedf-794f-5bac-a2ab-a322da4b11f0",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Phiếu nhập số lượng âm: 400",
+      "url": "http://localhost:3001/staff/receipts",
+      "method": "POST",
+      "sortNum": 640000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"lines\": [\n    {\n      \"ingredientId\": \"banh-quy\",\n      \"qty\": -5,\n      \"price\": 18000\n    }\n  ],\n  \"note\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "990f9106-08e5-5bb0-a970-40b90d17d3f0",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Phiếu nhập rỗng: 400",
+      "url": "http://localhost:3001/staff/receipts",
+      "method": "POST",
+      "sortNum": 650000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"lines\": [],\n  \"note\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "0424d7fd-688a-55de-a4ed-1e4453c21abe",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Phiếu nhập nguyên liệu không có: 400",
+      "url": "http://localhost:3001/staff/receipts",
+      "method": "POST",
+      "sortNum": 660000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"lines\": [\n    {\n      \"ingredientId\": \"khong-co\",\n      \"qty\": 1,\n      \"price\": 1000\n    }\n  ],\n  \"note\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "00fc18a0-4ccc-532e-a5d8-a84fd966ab55",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Nhân viên quầy xem cảnh báo nguyên liệu sắp hết",
+      "url": "http://localhost:3001/staff/inventory/alerts",
+      "method": "GET",
+      "sortNum": 670000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "4ca27c1a-5ce7-534c-a540-37db3d4fd079",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Nhân viên quầy nhập kho: 403",
+      "url": "http://localhost:3001/staff/receipts",
+      "method": "POST",
+      "sortNum": 680000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"lines\": [\n    {\n      \"ingredientId\": \"banh-quy\",\n      \"qty\": 1,\n      \"price\": 1000\n    }\n  ],\n  \"note\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "4122cf49-3835-575a-a43a-376d47ce0c52",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "59c6e486-a1ef-52b1-a7a7-6aee164cdbec",
+      "name": "Khách xem kho: 403",
+      "url": "http://localhost:3001/staff/inventory",
+      "method": "GET",
+      "sortNum": 690000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "a4bfa982-264b-53e0-a87c-5fe834716eed",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Khách đặt 1 Latte (lưu cancelOrderId)",
+      "url": "http://localhost:3001/orders",
+      "method": "POST",
+      "sortNum": 700000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "201"
+        },
+        {
+          "type": "set-env-var",
+          "custom": "json.id",
+          "action": "setto",
+          "value": "{{cancelOrderId}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"latte\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"qty\": 1\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"pickupTime\": \"Lấy ngay\",\n  \"paymentMethod\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "78eed262-d7d3-5df6-a325-9f416771ad54",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Khách trả bằng điểm",
+      "url": "http://localhost:3001/payments",
+      "method": "POST",
+      "sortNum": 710000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [
+        {
+          "name": "Idempotency-Key",
+          "value": "{{#guid}}"
+        }
+      ],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"orderId\": \"{{cancelOrderId}}\",\n  \"method\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "2eb3bab2-9168-57be-a1be-35e0b9ca2037",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Khách tự huỷ đơn đã trả: 409 (phải nhờ quầy)",
+      "url": "http://localhost:3001/orders/{{cancelOrderId}}/cancel",
+      "method": "POST",
+      "sortNum": 720000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "409"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "87194b6e-3f6a-5e45-a321-aa474ecc757e",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Quầy huỷ không ghi lý do: 400",
+      "url": "http://localhost:3001/staff/orders/{{cancelOrderId}}/cancel",
+      "method": "POST",
+      "sortNum": 730000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "46b994ab-8927-5711-a060-2b1d444a6ff5",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Quản lý gọi huỷ của quầy: 403",
+      "url": "http://localhost:3001/staff/orders/{{cancelOrderId}}/cancel",
+      "method": "POST",
+      "sortNum": 740000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"Thử\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "ed4f7254-f719-5477-af9d-0c0bd8efa8d6",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Quầy huỷ đơn (khách đổi ý): hoàn điểm, trả kho",
+      "url": "http://localhost:3001/staff/orders/{{cancelOrderId}}/cancel",
+      "method": "POST",
+      "sortNum": 750000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"Khách đổi ý, nhờ quầy huỷ\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "ff2b8384-f07b-530c-a34b-af2156146ba4",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Huỷ lại đơn đã huỷ: 409",
+      "url": "http://localhost:3001/staff/orders/{{cancelOrderId}}/cancel",
+      "method": "POST",
+      "sortNum": 760000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "409"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"Lần hai\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "718f8c31-f0a8-5ac4-a79f-564f37dd653c",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Khách xem đơn: trạng thái CANCELLED",
+      "url": "http://localhost:3001/orders/{{cancelOrderId}}",
+      "method": "GET",
+      "sortNum": 770000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status",
+          "action": "equal",
+          "value": "CANCELLED"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "137e4dd3-c65c-53fe-ab41-c946485d299d",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "05533692-477f-512a-a88d-7a74b92f0250",
+      "name": "Khách xem thông báo: có lý do huỷ",
+      "url": "http://localhost:3001/notifications/me",
+      "method": "GET",
+      "sortNum": 780000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "1173b95c-0a72-5a0e-aaf3-4f027ab27809",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Đăng ký khách thứ hai (lưu token2, khach2Id, khach2Email)",
+      "url": "http://localhost:3001/auth/register",
+      "method": "POST",
+      "sortNum": 790000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "201"
+        },
+        {
+          "type": "set-env-var",
+          "custom": "json.accessToken",
+          "action": "setto",
+          "value": "{{token2}}"
+        },
+        {
+          "type": "set-env-var",
+          "custom": "json.user.id",
+          "action": "setto",
+          "value": "{{khach2Id}}"
+        },
+        {
+          "type": "set-env-var",
+          "custom": "json.user.email",
+          "action": "setto",
+          "value": "{{khach2Email}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"fullName\": \"Khách thử khoá\",\n  \"email\": \"{{#email}}\",\n  \"password\": \"Matkhau123\",\n  \"confirmPassword\": \"Matkhau123\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "d0c04fc2-5c06-58a8-a848-314666eaf5ef",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khách 2 xem đơn của khách 1: 404 (không lộ đơn người khác)",
+      "url": "http://localhost:3001/orders/{{orderId}}",
+      "method": "GET",
+      "sortNum": 800000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "404"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token2}}"
+      }
+    },
+    {
+      "_id": "fc97d1d1-d32d-52d9-acad-c34efda64a23",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khách 2 huỷ đơn của khách 1: 404",
+      "url": "http://localhost:3001/orders/{{cancelOrderId}}/cancel",
+      "method": "POST",
+      "sortNum": 810000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "404"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token2}}"
+      }
+    },
+    {
+      "_id": "a80ff3a5-4352-5ab4-a596-a441fd8f56c5",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Quản lý tìm khách 2 trong danh sách",
+      "url": "http://localhost:3001/staff/customers?q={{khach2Email}}",
+      "method": "GET",
+      "sortNum": 820000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "19911c26-d361-5858-a2c5-cdd069e2ed44",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khoá không chọn lý do: 400",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}/lock",
+      "method": "POST",
+      "sortNum": 830000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "0eba9648-9fea-5ee7-a8ec-b562568f7562",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khoá \"Lý do khác\" mà không ghi rõ: 400",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}/lock",
+      "method": "POST",
+      "sortNum": 840000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"other\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "bb2073f9-9f86-522b-acb2-ed33568e3587",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Nhân viên quầy khoá khách: 403",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}/lock",
+      "method": "POST",
+      "sortNum": 850000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"fake-orders\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "c4553da3-72b3-5e9c-a018-b3b337d5500a",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Quản lý khoá khách 2 (đặt đơn rồi không nhận)",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}/lock",
+      "method": "POST",
+      "sortNum": 860000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"fake-orders\",\n  \"note\": \"Thử khoá từ Thunder Client\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "102f555f-cc9d-5e74-acdc-d2622121354d",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khách 2 đang đăng nhập bị đá ra: 401",
+      "url": "http://localhost:3001/auth/me",
+      "method": "GET",
+      "sortNum": 870000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token2}}"
+      }
+    },
+    {
+      "_id": "ccfc26f5-0ad6-5bd5-abee-c25253014a1e",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khách 2 đăng nhập lại: 403 kèm lý do khoá",
+      "url": "http://localhost:3001/auth/login",
+      "method": "POST",
+      "sortNum": 880000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"{{khach2Email}}\",\n  \"password\": \"Matkhau123\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "6d202c41-be2c-5f1c-a645-713b2220c8ba",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khoá lại tài khoản đang khoá: 409",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}/lock",
+      "method": "POST",
+      "sortNum": 890000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "409"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"fake-orders\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "60701e5d-ff01-5992-a04b-eb4a00d7efa0",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Mở khoá khách 2 (khoá nhầm)",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}/unlock",
+      "method": "POST",
+      "sortNum": 900000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"reason\": \"mistake\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "5c01c3b1-9e99-5b69-ae74-10670e275240",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Khách 2 đăng nhập lại được: 200",
+      "url": "http://localhost:3001/auth/login",
+      "method": "POST",
+      "sortNum": 910000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"{{khach2Email}}\",\n  \"password\": \"Matkhau123\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "da23fbcb-7566-59d5-ac59-5f650b7ca930",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "cb9a88f6-7139-5d55-af21-d0b6a34c05f4",
+      "name": "Không có API xoá tài khoản khách: 404",
+      "url": "http://localhost:3001/staff/customers/{{khach2Id}}",
+      "method": "DELETE",
+      "sortNum": 920000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "404"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    }
+  ]
+}

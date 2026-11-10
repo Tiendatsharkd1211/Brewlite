@@ -19,6 +19,7 @@ import type { Order, PaymentResult, VnpayReturnResult } from '@/lib/types';
 import Confetti from '@/components/ui/Confetti';
 import Skeleton from '@/components/ui/Skeleton';
 import { AlertIcon } from '@/components/ui/Icons';
+import { statusLabel } from '@/lib/pricing';
 
 type View = { step: 'loading' } | { step: 'error'; message: string } | { step: 'done'; result: VnpayReturnResult };
 
@@ -147,7 +148,7 @@ export default function VnpayReturn() {
       <h1 className="mt-4 text-2xl font-extrabold">{paid ? 'Thanh toán VNPay thành công!' : refund ? 'Giao dịch cần hoàn tiền' : 'Thanh toán không thành công'}</h1>
       <p className="mt-2 text-sm text-roast/65">
         Đơn <b className="text-roast">#{order.id}</b>, trạng thái{' '}
-        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${order.status === 'PAID' ? 'bg-leaf/15 text-leaf' : 'bg-chili/10 text-chili'}`}>{order.status}</span>
+        <span className={`stamp ${order.status === 'PAID' ? 'text-leaf' : 'text-chili'}`}>{statusLabel(order.status, order.fulfillment)}</span>
       </p>
       {!paid && <p className="mt-2 text-sm leading-relaxed text-roast/75">{payment.failureReason ?? message}</p>}
 

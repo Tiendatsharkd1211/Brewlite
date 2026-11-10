@@ -34,6 +34,14 @@ describe('Khuyến mãi và điểm thưởng', () => {
     expect(evaluateVoucher({ ...base, type: 'FREESHIP', requiresDelivery: true, minOrder: 0 }, { ...ctx, fulfillment: 'DELIVERY' })).toEqual({ ok: true, discount: 0, freeShip: true });
   });
 
+  it('chỉ dùng được trong thời hạn (giờ Việt Nam)', () => {
+    const v = { ...base, startsAt: new Date('2026-11-01T00:00:00+07:00'), endsAt: new Date('2026-11-30T23:59:59.999+07:00') };
+    expect(evaluateVoucher(v, { ...ctx, now: new Date('2026-10-31T23:59:00+07:00') })).toEqual({ ok: false, reason: `Mã ${base.code} chưa tới ngày áp dụng` });
+    expect(evaluateVoucher(v, { ...ctx, now: new Date('2026-11-01T00:00:00+07:00') }).ok).toBe(true);
+    expect(evaluateVoucher(v, { ...ctx, now: new Date('2026-11-30T23:59:00+07:00') }).ok).toBe(true);
+    expect(evaluateVoucher(v, { ...ctx, now: new Date('2026-12-01T00:00:01+07:00') })).toEqual({ ok: false, reason: `Mã ${base.code} đã hết hạn` });
+  });
+
   it('quy đổi điểm', () => {
     expect(pointsEarnedFor(35200)).toBe(35);
     expect(pointsNeededFor(35200)).toBe(352);

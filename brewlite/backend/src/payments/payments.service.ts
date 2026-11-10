@@ -53,13 +53,25 @@ export class PaymentsService {
     const existing = await this.prisma.payment.findUnique({ where: { idempotencyKey } });
     if (existing) return this.replay(existing, userId, dto);
 
-    const order = await this.prisma.order.findFirst({ where: { id: dto.orderId, userId } });
-    if (!order) throw new NotFoundException(`Không tìm thấy đơn ${dto.orderId}`);
-    assertPayable(order.status);
-    if (dto.method !== order.paymentMethod) {
-      throw new BadRequestException('Phương thức thanh toán khác với lúc tạo đơn, hãy tạo lại đơn');
+    try {
+      const order = await this.prisma.order.findFirst({ where: { id: dto.orderId, userId } });
+      if (!order) throw new NotFoundException(`Không tìm thấy đơn ${dto.orderId}`);
+      assertPayable(order.status);
+      if (dto.method !== order.paymentMethod) {
+        throw new BadRequestException('Phương thức thanh toán khác với lúc tạo đơn, hãy tạo lại đơn');
+      }
+      return await (dto.method === 'VNPAY'
+        ? this.startVnpay(userId, idempotencyKey, order, ipAddr, dto)
+        : this.payWithPoints(userId, idempotencyKey, order, dto));
+    } catch (err) {
+      // Request trùng khoá tới ngay sau khi request kia vừa trả xong: đơn đã PAID nên bị chặn,
+      // nhưng với client đây vẫn là cùng một lần bấm => trả lại đúng giao dịch đó thay vì báo lỗi
+      if (err instanceof ConflictException) {
+        const winner = await this.prisma.payment.findUnique({ where: { idempotencyKey } });
+        if (winner) return this.replay(winner, userId, dto);
+      }
+      throw err;
     }
-    return dto.method === 'VNPAY' ? this.startVnpay(userId, idempotencyKey, order, ipAddr, dto) : this.payWithPoints(userId, idempotencyKey, order, dto);
   }
 
   // ---------------------------------------------------------------- VNPay

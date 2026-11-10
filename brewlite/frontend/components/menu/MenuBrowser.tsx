@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useAppStore } from '@/context/app-store';
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFavorites } from '@/lib/favorites';
 import { CATEGORIES } from '@/lib/mock-data';
 import { useProducts } from '@/lib/products';
 import { searchProducts, type ProductHit } from '@/lib/search';
@@ -20,6 +21,9 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'favorites', label: 'Yêu thích' },
 ];
 
+/** Số món mỗi trang: 2 hàng trên máy tính, 4 hàng trên điện thoại */
+const PAGE_SIZE = 8;
+
 const SORTS: { id: Sort; label: string }[] = [
   { id: 'popular', label: 'Bán chạy nhất' },
   { id: 'rating', label: 'Đánh giá cao' },
@@ -29,14 +33,21 @@ const SORTS: { id: Sort; label: string }[] = [
 
 interface Props {
   initialQuery?: string;
+  /** Nhóm món mở sẵn, ví dụ từ ô "Thực đơn theo nhóm" ở trang nhất (/menu?nhom=banh-ngot) */
+  initialCategory?: CategoryId;
   title: string;
 }
 
-export default function MenuBrowser({ initialQuery = '', title }: Props) {
-  const { favorites, hydrated } = useAppStore();
-  const [filter, setFilter] = useState<Filter>('all');
+export default function MenuBrowser({ initialQuery = '', initialCategory, title }: Props) {
+  const { favorites, signedIn } = useFavorites();
+  const [filter, setFilter] = useState<Filter>(initialCategory ?? 'all');
   const [sort, setSort] = useState<Sort>('popular');
   const [query, setQuery] = useState(initialQuery);
+  const [page, setPage] = useState(1);
+  const top = useRef<HTMLElement>(null);
+
+  // Đổi bộ lọc, cách sắp xếp hay từ khoá thì quay về trang 1
+  useEffect(() => setPage(1), [filter, sort, query]);
   // Menu từ GET /products (React Query lo loading, lỗi, cache)
   const { data: products, isLoading, isError, error, refetch, isFetching } = useProducts();
 
@@ -62,8 +73,18 @@ export default function MenuBrowser({ initialQuery = '', title }: Props) {
     return sorted;
   }, [products, query, filter, sort, favorites]);
 
+  const pages = Math.max(1, Math.ceil(hits.length / PAGE_SIZE));
+  const current = Math.min(page, pages);
+  const shown = hits.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
+  function goTo(n: number) {
+    setPage(n);
+    // Sang trang mới thì đưa khách lên đầu thực đơn, không bắt cuộn ngược lên
+    top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
-    <section id="menu" className="scroll-mt-36">
+    <section id="menu" ref={top} className="scroll-mt-36">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h2>
         <label className="flex items-center gap-2 text-sm">
@@ -95,7 +116,7 @@ export default function MenuBrowser({ initialQuery = '', title }: Props) {
           >
             {f.id === 'favorites' && <HeartIcon filled={filter === f.id} className="h-4 w-4" />}
             {f.label}
-            {f.id === 'favorites' && hydrated && favorites.length > 0 && <span className="tabular-nums opacity-70">{favorites.length}</span>}
+            {f.id === 'favorites' && favorites.length > 0 && <span className="tabular-nums opacity-70">{favorites.length}</span>}
           </button>
         ))}
       </div>
@@ -115,7 +136,7 @@ export default function MenuBrowser({ initialQuery = '', title }: Props) {
         <div className="mt-6 flex flex-col items-center rounded-3xl bg-foam px-6 py-10 text-center">
           <AlertIcon className="h-10 w-10 text-chili" />
           <p className="mt-3 text-lg font-bold">Không tải được thực đơn</p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-roast/65">{error instanceof Error ? error.message : 'Máy chủ chưa phản hồi.'}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-roast/65">{error instanceof Error ? error.message : 'Bạn kiểm tra mạng rồi thử lại nhé.'}</p>
           <button type="button" onClick={() => refetch()} disabled={isFetching} className="mt-5 rounded-full bg-gold px-5 py-2.5 font-bold text-roast disabled:opacity-60">
             {isFetching ? 'Đang thử lại…' : 'Thử lại'}
           </button>
@@ -133,16 +154,27 @@ export default function MenuBrowser({ initialQuery = '', title }: Props) {
             </div>
           ))}
         </div>
-      ) : hits.length ? (
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-          {hits.map(({ product, match }, i) => (
-            <ProductCard key={product.id} product={product} ranges={match.ranges} index={i} />
-          ))}
+      ) : filter === 'favorites' && !signedIn ? (
+        <div className="mt-6 border-2 border-roast bg-foam px-6 py-10 text-center">
+          <p className="text-lg font-bold">Đăng nhập để xem món yêu thích</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-roast/65">Món bạn thả tim được lưu vào tài khoản, đổi điện thoại hay máy tính vẫn còn.</p>
+          <Link href="/login?next=/menu" className="mt-5 inline-flex h-11 items-center bg-gold px-6 font-label text-sm font-semibold uppercase tracking-wider text-foam hover:bg-gold-deep">
+            Đăng nhập
+          </Link>
         </div>
+      ) : hits.length ? (
+        <>
+          <div key={current} className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            {shown.map(({ product, match }, i) => (
+              <ProductCard key={product.id} product={product} ranges={match.ranges} index={i} />
+            ))}
+          </div>
+          {pages > 1 && <Pager current={current} pages={pages} total={hits.length} onChange={goTo} />}
+        </>
       ) : products && products.length === 0 ? (
         <div className="mt-6 rounded-3xl bg-foam px-6 py-10 text-center">
           <p className="text-lg font-bold">Thực đơn đang được cập nhật</p>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-roast/65">Cửa hàng chưa có món nào. Chạy lệnh nạp dữ liệu mẫu (npm run seed) ở thư mục backend.</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-roast/65">Quán đang cập nhật thực đơn, bạn quay lại sau ít phút nhé.</p>
         </div>
       ) : filter === 'favorites' && !query.trim() ? (
         <div className="mt-6 rounded-3xl bg-foam px-6 py-10 text-center">
@@ -174,5 +206,37 @@ export default function MenuBrowser({ initialQuery = '', title }: Props) {
         </div>
       )}
     </section>
+  );
+}
+
+/** Thanh chuyển trang kiểu báo: Trang trước · 1 2 3 · Trang sau */
+function Pager({ current, pages, total, onChange }: { current: number; pages: number; total: number; onChange: (n: number) => void }) {
+  const btn = 'inline-flex h-11 min-w-11 items-center justify-center border-2 px-3 font-label text-sm font-semibold uppercase tracking-wider transition-colors';
+  return (
+    <nav className="mt-8 flex flex-col items-center gap-3 border-t-[3px] border-double border-roast pt-5" aria-label="Chuyển trang thực đơn">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button type="button" onClick={() => onChange(current - 1)} disabled={current === 1} className={`${btn} border-roast enabled:hover:bg-roast enabled:hover:text-cream disabled:border-roast/25 disabled:text-roast/35`}>
+          ← Trước
+        </button>
+        {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            aria-current={n === current ? 'page' : undefined}
+            aria-label={`Trang ${n}`}
+            className={`${btn} tabular-nums ${n === current ? 'border-roast bg-roast text-cream' : 'border-roast/30 hover:border-roast'}`}
+          >
+            {n}
+          </button>
+        ))}
+        <button type="button" onClick={() => onChange(current + 1)} disabled={current === pages} className={`${btn} border-roast enabled:hover:bg-roast enabled:hover:text-cream disabled:border-roast/25 disabled:text-roast/35`}>
+          Sau →
+        </button>
+      </div>
+      <p className="font-label text-xs uppercase tracking-wider text-roast/60">
+        Trang {current}/{pages} · {total} món
+      </p>
+    </nav>
   );
 }

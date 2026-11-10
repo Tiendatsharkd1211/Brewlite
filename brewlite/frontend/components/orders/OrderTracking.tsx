@@ -54,7 +54,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
   }, [order, load]);
 
   /** Gọi API đổi trạng thái; máy trạng thái ở backend sẽ từ chối nếu không hợp lệ */
-  async function act(path: 'advance' | 'cancel') {
+  async function act(path: 'cancel') {
     if (!order) return;
     setBusy(true);
     setActionError(null);
@@ -105,13 +105,13 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
   const pickup = order.fulfillment === 'PICKUP';
   const unpaid = order.status === 'PENDING' || order.status === 'PAYMENT_FAILED';
   const message: Record<Order['status'], string> = {
-    PENDING: 'Đơn đã được tạo và đang giữ món cho bạn, chờ thanh toán.',
+    PENDING: 'Đơn đã được tạo và đang giữ món cho bạn trong 30 phút, chờ thanh toán. Quá 30 phút đơn tự huỷ, bạn không bị trừ tiền.',
     PAYMENT_FAILED: 'Thanh toán chưa thành công, bạn chưa bị trừ tiền. Thanh toán lại hoặc huỷ đơn.',
-    PAID: 'Đã thanh toán. Quầy đã nhận đơn và đang xếp lượt pha chế.',
+    PAID: 'Đã thanh toán. Quầy đã nhận đơn và đang xếp lượt pha chế. Muốn huỷ, báo quầy trước khi pha để được hoàn tiền hoặc hoàn điểm.',
     PREPARING: 'Barista đang pha món của bạn.',
     READY: pickup ? `Món đã sẵn sàng. Tới quầy ${STORE.shortName} và đọc mã đơn ${order.id}.` : 'Shipper đang trên đường giao tới bạn.',
     COMPLETED: 'Đơn đã hoàn thành. Cảm ơn bạn đã chọn BrewLite!',
-    CANCELLED: 'Đơn đã huỷ, món đã được trả lại kho.',
+    CANCELLED: 'Đơn đã huỷ, món đã được trả lại kho. Lý do và việc hoàn tiền, hoàn điểm có trong mục Thông báo.',
   };
 
   /** Đơn chưa trả xong: tạo link VNPay mới (khoá Idempotency-Key mới) rồi chuyển sang cổng VNPay */
@@ -167,7 +167,7 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
           <h2 id="progress-title" className="text-xl font-extrabold">
             {statusLabel(order.status, order.fulfillment)}
           </h2>
-          <code className="rounded-lg bg-cream px-2 py-1 text-xs font-bold text-roast/70">{order.status}</code>
+          <span className="stamp text-gold">{statusLabel(order.status, order.fulfillment)}</span>
         </div>
         <p className="mt-1 text-roast/70" aria-live="polite">
           {message[order.status]}
@@ -212,11 +212,6 @@ export default function OrderTracking({ orderId }: { orderId: string }) {
           {unpaid && (
             <button type="button" disabled={busy} onClick={() => act('cancel')} className="rounded-full border-2 border-chili/40 px-4 py-2 text-sm font-semibold text-chili hover:bg-chili/10 disabled:opacity-60">
               Huỷ đơn
-            </button>
-          )}
-          {['PAID', 'PREPARING', 'READY'].includes(order.status) && (
-            <button type="button" disabled={busy} onClick={() => act('advance')} className="text-xs text-roast/50 underline underline-offset-4 disabled:opacity-60">
-              Demo (vai trò quầy): chuyển sang bước tiếp theo
             </button>
           )}
         </div>

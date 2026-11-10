@@ -12,6 +12,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   confirmPassword: string;
+  phone?: string;
 }
 
 type Status = 'loading' | 'guest' | 'authed';
@@ -26,6 +27,7 @@ interface AuthValue {
   setUser: (user: User) => void;
   /** Gọi API có kèm token; hết phiên (401) thì tự đăng xuất */
   request: <T>(path: string, options?: Omit<RequestOptions, 'token'>) => Promise<T>;
+  changePassword: (input: { currentPassword: string; newPassword: string; confirmPassword: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -102,6 +104,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [startSession],
   );
 
+  /** Đổi mật khẩu: máy chủ cấp token mới (các máy khác bị đăng xuất), lưu lại để máy này vẫn đăng nhập */
+  const changePassword = useCallback(
+    async (input: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
+      const res = await apiRequest<{ accessToken: string; user: User }>('/auth/change-password', { method: 'POST', body: input, token });
+      startSession(res.accessToken, res.user);
+    },
+    [token, startSession],
+  );
+
   const request = useCallback(
     async <T,>(path: string, options: Omit<RequestOptions, 'token'> = {}) => {
       try {
@@ -121,8 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, request]);
 
   const value = useMemo<AuthValue>(
-    () => ({ status, user, login, register, logout, refresh, setUser, request }),
-    [status, user, login, register, logout, refresh, request],
+    () => ({ status, user, login, register, logout, refresh, setUser, request, changePassword }),
+    [status, user, login, register, logout, refresh, request, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { formatNumber } from '@/lib/format';
 import { tierOf } from '@/lib/pricing';
-import { LogoutIcon, ReceiptIcon, UserIcon, WalletIcon } from '@/components/ui/Icons';
+import { CupIcon, LogoutIcon, ReceiptIcon, UserIcon, WalletIcon } from '@/components/ui/Icons';
 
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/);
@@ -57,6 +57,16 @@ export default function UserMenu() {
               </p>
             </div>
             <nav className="mt-1 flex flex-col text-sm font-semibold">
+              {user.role === 'MANAGER' && (
+                <Link href="/quan-ly" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl bg-gold/15 px-3 py-2.5 hover:bg-gold/25">
+                  <ReceiptIcon /> Quản lý cửa hàng
+                </Link>
+              )}
+              {user.role === 'STAFF' && (
+                <Link href="/staff" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl bg-gold/15 px-3 py-2.5 hover:bg-gold/25">
+                  <CupIcon /> Quầy pha chế
+                </Link>
+              )}
               <Link href="/account" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-cream">
                 <UserIcon /> Tài khoản và điểm thưởng
               </Link>

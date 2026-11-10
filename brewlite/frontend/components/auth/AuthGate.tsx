@@ -6,10 +6,11 @@ import type { ReactNode } from 'react';
 import { useAuth } from '@/context/auth-context';
 import Skeleton from '@/components/ui/Skeleton';
 import { LockIcon } from '@/components/ui/Icons';
+import InternalNotice from './InternalNotice';
 
 /** Bọc nội dung cần đăng nhập: chưa đăng nhập thì hiện lời mời đăng nhập thay vì trang trống */
 export default function AuthGate({ children, title, description }: { children: ReactNode; title: string; description: string }) {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const pathname = usePathname();
 
   if (status === 'loading') {
@@ -42,6 +43,9 @@ export default function AuthGate({ children, title, description }: { children: R
       </div>
     );
   }
+
+  // Tài khoản nhân viên, quản lý: trang của khách không dùng được
+  if (user && user.role !== 'CUSTOMER') return <InternalNotice />;
 
   return <>{children}</>;
 }

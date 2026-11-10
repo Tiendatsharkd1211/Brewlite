@@ -4,7 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { DEV_JWT_SECRET, JwtStrategy } from './jwt.strategy';
+import { JwtStrategy, jwtSecret } from './jwt.strategy';
 
 @Module({
   imports: [
@@ -12,7 +12,7 @@ import { DEV_JWT_SECRET, JwtStrategy } from './jwt.strategy';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') ?? DEV_JWT_SECRET,
+        secret: jwtSecret(config),
         signOptions: { expiresIn: 60 * 60 * 24 * 7 }, // token có hạn 7 ngày
       }),
     }),

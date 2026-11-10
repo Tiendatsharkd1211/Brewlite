@@ -87,7 +87,7 @@ export default function SearchBox() {
         autoComplete="off"
         enterKeyHint="search"
         value={query}
-        placeholder="Tìm món… thử gõ bx hoặc cpsd"
+        placeholder="Tìm món, gõ bx, cpsd…"
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);

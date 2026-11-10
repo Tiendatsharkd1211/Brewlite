@@ -14,10 +14,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { MAX_QTY, useAppStore } from '@/context/app-store';
 import { useAuth } from '@/context/auth-context';
+import InternalNotice from '@/components/auth/InternalNotice';
 import { ApiError } from '@/lib/api';
 import { PAYMENT_METHODS, STORE } from '@/lib/mock-data';
 import { describeOptions, formatNumber, formatVnd } from '@/lib/format';
-import { DELIVERY_FEE, POINT_VALUE, VOUCHER_HINT, applyVoucher, pointsEarnedFor } from '@/lib/pricing';
+import { DELIVERY_FEE, POINT_VALUE, VOUCHER_HINT, pointsEarnedFor, statusLabel } from '@/lib/pricing';
+import { fetchQuote, useQuote } from '@/lib/quote';
 import { PRODUCTS_KEY, useProductMap } from '@/lib/products';
 import type { Fulfillment, Order, PaymentMethodId, PaymentResult } from '@/lib/types';
 import ProductArt from '@/components/menu/ProductArt';
@@ -96,7 +98,7 @@ function ChoiceCard({ checked, onSelect, title, hint }: { checked: boolean; onSe
 export default function Checkout() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hydrated, cart, cartCount, subtotal, setQuantity, removeFromCart, clearCart } = useAppStore();
+  const { hydrated, cart, cartCount, subtotal, setQuantity, removeFromCart, setCartPrices, clearCart, savedVoucher, setSavedVoucher } = useAppStore();
   const { status: authStatus, user, request, refresh } = useAuth();
   const { openProduct } = useProductSheet();
   const productMap = useProductMap();
@@ -115,12 +117,38 @@ export default function Checkout() {
 
   const slots = useMemo(() => (hydrated ? buildSlots(new Date()) : []), [hydrated]);
 
-  // ----- Tạm tính (backend sẽ tính lại khi tạo đơn) -----
-  const voucher = appliedCode ? applyVoucher(appliedCode, subtotal, fulfillment, method) : null;
-  const baseFee = fulfillment === 'delivery' ? DELIVERY_FEE : 0;
-  const fee = voucher?.ok && voucher.freeShip ? 0 : baseFee;
-  const discount = voucher?.ok ? voucher.discount : 0;
-  const total = Math.max(subtotal + fee - discount, 0);
+  // Mã đã chọn ở trang nhất: điền sẵn, mã VNPay thì chọn sẵn VNPay, đủ điều kiện là tự áp
+  useEffect(() => {
+    if (!savedVoucher || appliedCode) return;
+    setVoucherInput(savedVoucher);
+    if (savedVoucher === 'VNPAY20' && method === null) {
+      setMethod('VNPAY');
+      return;
+    }
+    void tryApply(savedVoucher, true);
+  }, [savedVoucher, appliedCode, method]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ----- Tiền do máy chủ báo giá (giá CSDL, mã thật, còn hàng); mất mạng thì dùng tạm tính ở trình duyệt -----
+  const quote = useQuote(cart, fulfillment, method, appliedCode, hydrated && cart.length > 0);
+  const voucher = quote?.voucher ?? null;
+  const fee = quote ? quote.fee : fulfillment === 'delivery' ? DELIVERY_FEE : 0;
+  const discount = quote?.discount ?? 0;
+  const shownSubtotal = quote?.subtotal ?? subtotal;
+  const total = quote ? quote.total : Math.max(subtotal + fee, 0);
+  const [priceChanged, setPriceChanged] = useState(false);
+
+  // Quản lý vừa đổi giá: cập nhật giá trong giỏ và báo cho khách biết
+  useEffect(() => {
+    if (!quote || quote.lines.length !== cart.length) return;
+    const changed: Record<string, number> = {};
+    quote.lines.forEach((l, i) => {
+      if (l.unitPrice > 0 && l.unitPrice !== cart[i].unitPrice) changed[cart[i].lineId] = l.unitPrice;
+    });
+    if (Object.keys(changed).length) {
+      setCartPrices(changed);
+      setPriceChanged(true);
+    }
+  }, [quote]); // eslint-disable-line react-hooks/exhaustive-deps
   const pointsNeeded = Math.ceil(total / POINT_VALUE);
   const methodName = (id: PaymentMethodId) => PAYMENT_METHODS.find((m) => m.id === id)?.name ?? '';
 
@@ -134,6 +162,7 @@ export default function Checkout() {
   if (fulfillment === 'delivery' && address.trim().length < 8) blockers.push('Nhập địa chỉ giao hàng để tiếp tục.');
   if (fulfillment === 'pickup' && timeMode === 'slot' && !slot) blockers.push('Chọn khung giờ lấy món để tiếp tục.');
   if (!method) blockers.push('Chọn phương thức thanh toán để tiếp tục.');
+  if (quote && !quote.ok) blockers.push('Có món không đặt được, bỏ món đó hoặc giảm số lượng để tiếp tục.');
   const canPay = cart.length > 0 && blockers.length === 0 && !isGuest;
 
   // ----- Bước 1: tạo đơn PENDING -----
@@ -185,7 +214,7 @@ export default function Checkout() {
         setPay({ step: 'failed', reason: 'declined', message: result.payment.failureReason ?? 'Giao dịch bị từ chối.', order: result.order });
       }
     } catch (err) {
-      setPay({ step: 'failed', reason: 'server', message: errorText(err, 'Máy chủ chưa xử lý được giao dịch.'), order });
+      setPay({ step: 'failed', reason: 'server', message: errorText(err, 'Chưa xử lý được thanh toán, bạn thử lại nhé.'), order });
     }
   }
 
@@ -231,18 +260,29 @@ export default function Checkout() {
     [request, queryClient],
   );
 
-  function applyCode(e: FormEvent) {
-    e.preventDefault();
-    const result = applyVoucher(voucherInput, subtotal, fulfillment, method);
-    if (result.ok) {
-      setAppliedCode(result.code);
-      setVoucherError(null);
-    } else {
-      setVoucherError(result.message);
+  /** Hỏi máy chủ mã có áp được cho giỏ hiện tại không (mã thật trong CSDL, kể cả mã quản lý vừa tạo) */
+  async function tryApply(raw: string, silent = false) {
+    const code = raw.trim().toUpperCase();
+    if (!code) return silent || setVoucherError('Nhập mã ưu đãi trước khi áp dụng.');
+    try {
+      const q = await fetchQuote(cart, fulfillment, method, code);
+      if (q.voucher?.ok) {
+        setAppliedCode(code);
+        setVoucherError(null);
+      } else if (!silent) setVoucherError(q.voucher?.message ?? `Mã ${code} không dùng được.`);
+    } catch (err) {
+      if (!silent) setVoucherError(errorText(err, 'Chưa kiểm tra được mã, thử lại sau ít phút.'));
     }
   }
 
+  function applyCode(e: FormEvent) {
+    e.preventDefault();
+    void tryApply(voucherInput);
+  }
+
   // ----- Hiển thị -----
+  if (user && user.role !== 'CUSTOMER') return <InternalNotice />;
+
   if (!hydrated) {
     return (
       <main className="mx-auto max-w-6xl px-4 pt-6" aria-busy="true">
@@ -362,9 +402,15 @@ export default function Checkout() {
                 </Link>
               }
             >
+              {priceChanged && (
+                <p role="status" className="mb-3 rounded-xl bg-amber-600/10 px-3 py-2 text-sm text-amber-800">
+                  Giá một số món vừa được quán cập nhật, tổng tiền dưới đây đã tính theo giá mới.
+                </p>
+              )}
               <ul className="divide-y divide-roast/10">
-                {cart.map((item) => {
+                {cart.map((item, idx) => {
                   const product = productMap.get(item.productId);
+                  const problem = quote?.lines[idx]?.problem;
                   const options = describeOptions(item);
                   return (
                     <li key={item.lineId} className="flex gap-3 py-4 first:pt-0 last:pb-0">
@@ -378,6 +424,11 @@ export default function Checkout() {
                         </div>
                         {options && <p className="mt-0.5 text-sm text-roast/60">{options}</p>}
                         {item.note && <p className="mt-0.5 text-sm text-roast/60">Ghi chú: {item.note}</p>}
+                        {problem && (
+                          <p role="alert" className="mt-1 flex items-center gap-1 text-sm font-semibold text-chili">
+                            <AlertIcon className="h-4 w-4 shrink-0" /> {problem}
+                          </p>
+                        )}
                         <div className="mt-2 flex items-center justify-between gap-3">
                           <QuantityStepper compact value={item.quantity} onChange={(q) => setQuantity(item.lineId, q)} max={MAX_QTY} label={item.name} />
                           <span className="flex items-center gap-1">
@@ -414,7 +465,14 @@ export default function Checkout() {
                     <p className="font-bold">{appliedCode}</p>
                     <p className={voucher?.ok ? 'text-leaf' : 'text-chili'}>{voucher?.ok ? voucher.label : voucher?.message}</p>
                   </div>
-                  <button type="button" onClick={() => setAppliedCode(null)} className="shrink-0 text-sm font-semibold text-espresso underline underline-offset-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCode(null);
+                      setSavedVoucher(null);
+                    }}
+                    className="shrink-0 text-sm font-semibold text-espresso underline underline-offset-4"
+                  >
                     Bỏ mã
                   </button>
                 </div>
@@ -460,7 +518,7 @@ export default function Checkout() {
               <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between gap-3">
                   <dt className="text-roast/65">Tiền hàng ({cartCount} món)</dt>
-                  <dd className="tabular-nums">{formatVnd(subtotal)}</dd>
+                  <dd className="tabular-nums">{formatVnd(shownSubtotal)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-roast/65">{fulfillment === 'delivery' ? 'Phí giao hàng' : 'Phí dịch vụ'}</dt>
@@ -480,7 +538,7 @@ export default function Checkout() {
               <p className="mt-1 text-right text-xs text-roast/55">
                 {method === 'POINTS' ? `Trừ ${formatNumber(pointsNeeded)} điểm` : `Tích ${formatNumber(pointsEarnedFor(total))} điểm sau khi thanh toán`}
               </p>
-              {method === 'VNPAY' && <p className="mt-1 text-right text-xs text-roast/55">Trả trên cổng VNPay (môi trường thử sandbox)</p>}
+              {method === 'VNPAY' && <p className="mt-1 text-right text-xs text-roast/55">Bạn sẽ được chuyển sang trang thanh toán của VNPay</p>}
             </section>
 
             <div className="fixed inset-x-0 bottom-0 z-20 border-t border-roast/10 bg-foam px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:static md:mt-4 md:border-0 md:bg-transparent md:p-0">
@@ -546,7 +604,7 @@ export default function Checkout() {
             </h2>
             <p className="mt-2 text-sm text-roast/65">
               Mã đơn <b className="text-roast">#{pay.order.id}</b>, trạng thái{' '}
-              <span className="rounded-full bg-leaf/15 px-2 py-0.5 text-xs font-bold text-leaf">{pay.order.status}</span>
+              <span className="stamp text-leaf">{statusLabel(pay.order.status, pay.order.fulfillment)}</span>
             </p>
             {pay.order.fulfillment === 'PICKUP' ? (
               <div className="mt-5 rounded-2xl bg-cream px-4 py-4 text-sm">
@@ -585,7 +643,7 @@ export default function Checkout() {
             {pay.order && (
               <p className="mt-2 text-sm">
                 Đơn <b>#{pay.order.id}</b>:{' '}
-                <span className="rounded-full bg-chili/10 px-2 py-0.5 text-xs font-bold text-chili">{pay.order.status}</span>
+                <span className="stamp text-chili">{statusLabel(pay.order.status, pay.order.fulfillment)}</span>
               </p>
             )}
             <p className="mt-2 text-sm leading-relaxed text-roast/70">

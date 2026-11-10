@@ -1,7 +1,7 @@
 'use client';
 
 // GIỎ HÀNG (Task 5) quản lý bằng Zustand, lưu localStorage để tải lại trang không mất.
-// Kèm món yêu thích của khách.
+// Món yêu thích không ở đây: lưu theo tài khoản trên máy chủ (lib/favorites.ts).
 import { useEffect, type ReactNode } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -38,13 +38,20 @@ interface CartState {
   updateLine: (lineId: string, item: NewCartItem) => void;
   setQuantity: (lineId: string, quantity: number) => void;
   remove: (lineId: string) => void;
+  /** Cập nhật đơn giá theo máy chủ (quản lý vừa đổi giá) */
+  setPrices: (prices: Record<string, number>) => void;
   clear: () => void;
+  /** Mã ưu đãi khách bấm "Dùng mã này" ở trang nhất; trang thanh toán tự áp */
+  voucher: string | null;
+  setVoucher: (code: string | null) => void;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       items: [],
+      voucher: null,
+      setVoucher: (voucher) => set({ voucher }),
       add: (item) => set((s) => ({ items: merge(s.items, item) })),
       addMany: (items) => set((s) => ({ items: items.reduce(merge, s.items) })),
       updateLine: (lineId, item) =>
@@ -60,24 +67,10 @@ export const useCartStore = create<CartState>()(
       setQuantity: (lineId, quantity) =>
         set((s) => ({ items: s.items.map((c) => (c.lineId === lineId ? { ...c, quantity: Math.max(1, Math.min(quantity, MAX_QTY)) } : c)) })),
       remove: (lineId) => set((s) => ({ items: s.items.filter((c) => c.lineId !== lineId) })),
-      clear: () => set({ items: [] }),
+      setPrices: (prices) => set((s) => ({ items: s.items.map((c) => (prices[c.lineId] ? { ...c, unitPrice: prices[c.lineId] } : c)) })),
+      clear: () => set({ items: [], voucher: null }),
     }),
     { name: 'brewlite.cart', storage: createJSONStorage(() => localStorage), skipHydration: true },
-  ),
-);
-
-interface PrefsState {
-  favorites: string[];
-  toggleFavorite: (productId: string) => void;
-}
-
-export const usePrefsStore = create<PrefsState>()(
-  persist(
-    (set) => ({
-      favorites: [],
-      toggleFavorite: (id) => set((s) => ({ favorites: s.favorites.includes(id) ? s.favorites.filter((f) => f !== id) : [...s.favorites, id] })),
-    }),
-    { name: 'brewlite.prefs', storage: createJSONStorage(() => localStorage), skipHydration: true },
   ),
 );
 
@@ -86,15 +79,18 @@ const useHydration = create<{ hydrated: boolean }>(() => ({ hydrated: false }));
 /** Nạp giỏ hàng đã lưu sau khi trang chạy trên trình duyệt (tránh lệch giữa HTML server và client) */
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
-    Promise.all([useCartStore.persist.rehydrate(), usePrefsStore.persist.rehydrate()]).finally(() => useHydration.setState({ hydrated: true }));
+    // Bản cũ từng lưu món yêu thích trong trình duyệt; giờ đã chuyển lên tài khoản nên dọn đi
+    try {
+      localStorage.removeItem('brewlite.prefs');
+    } catch {}
+    Promise.resolve(useCartStore.persist.rehydrate()).finally(() => useHydration.setState({ hydrated: true }));
   }, []);
   return <>{children}</>;
 }
 
-/** Hook gộp tiện dùng cho component: giỏ hàng + tuỳ chọn cá nhân */
+/** Hook gộp tiện dùng cho component: giỏ hàng */
 export function useAppStore() {
   const cart = useCartStore();
-  const prefs = usePrefsStore();
   const hydrated = useHydration((s) => s.hydrated);
   return {
     hydrated,
@@ -106,8 +102,9 @@ export function useAppStore() {
     updateLine: cart.updateLine,
     setQuantity: cart.setQuantity,
     removeFromCart: cart.remove,
+    setCartPrices: cart.setPrices,
     clearCart: cart.clear,
-    favorites: prefs.favorites,
-    toggleFavorite: prefs.toggleFavorite,
+    savedVoucher: cart.voucher,
+    setSavedVoucher: cart.setVoucher,
   };
 }

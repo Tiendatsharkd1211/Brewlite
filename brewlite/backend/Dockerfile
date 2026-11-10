@@ -18,5 +18,5 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/dist ./dist
 EXPOSE 3001
-# Tạo/cập nhật bảng theo schema.prisma, nạp dữ liệu mẫu (chỉ thêm cái còn thiếu), rồi chạy API
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/seed.js && node dist/main"]
+# Tạo/cập nhật bảng theo schema.prisma, rào CSDL (tài khoản app, CHECK), nạp dữ liệu mẫu (chỉ thêm cái còn thiếu), rồi chạy API
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/db-harden.js && node dist/seed.js && node dist/main"]

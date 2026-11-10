@@ -1,0 +1,1058 @@
+{
+  "client": "Thunder Client",
+  "clientName": "Thunder Client",
+  "collectionName": "BrewLite mở rộng 2 - Bảo mật, Yêu thích, Quản lý",
+  "collectionId": "f0a889df-cfa5-4d5d-bfdb-1fd9ba2fd688",
+  "dateExported": "2026-11-03T12:00:00.000Z",
+  "version": "1.2",
+  "folders": [
+    {
+      "_id": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "6. Bảo mật: các ca phải bị chặn",
+      "containerId": "",
+      "created": "2026-11-03T12:00:00.000Z",
+      "sortNum": 60000
+    },
+    {
+      "_id": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "7. Món yêu thích (lưu theo tài khoản)",
+      "containerId": "",
+      "created": "2026-11-03T12:00:00.000Z",
+      "sortNum": 70000
+    },
+    {
+      "_id": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "8. Quản lý: tổng quan và phân quyền",
+      "containerId": "",
+      "created": "2026-11-07T12:00:00.000Z",
+      "sortNum": 80000
+    },
+    {
+      "_id": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "9. Quản lý: thực đơn và mã giảm giá",
+      "containerId": "",
+      "created": "2026-11-07T12:00:00.000Z",
+      "sortNum": 90000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "98653a0c-a094-552c-b705-5807e415eaf1",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Không có token: 401",
+      "url": "http://localhost:3001/orders/me",
+      "method": "GET",
+      "sortNum": 230000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ]
+    },
+    {
+      "_id": "2d9dfb25-e333-5174-981c-48c8c6ba9797",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Token giả: 401",
+      "url": "http://localhost:3001/auth/me",
+      "method": "GET",
+      "sortNum": 240000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoYWNrIn0.gia-mao"
+        }
+      ],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ]
+    },
+    {
+      "_id": "acd17890-ee25-5aa1-b556-d19c8d121dfe",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Khách gọi API của quầy: 403",
+      "url": "http://localhost:3001/staff/orders",
+      "method": "GET",
+      "sortNum": 250000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "c21cd2d2-6029-53be-b016-361fc10fae82",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Khách tự chuyển trạng thái đơn: 403",
+      "url": "http://localhost:3001/staff/orders/{{orderId}}/advance",
+      "method": "POST",
+      "sortNum": 260000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "517dfedc-b8d2-506f-95f5-9874fc817226",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Nhân viên xem đơn của khách qua API khách: 403 (API đơn hàng chỉ dành cho tài khoản khách)",
+      "url": "http://localhost:3001/orders/{{orderId}}",
+      "method": "GET",
+      "sortNum": 270000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "4afb589d-c300-5c53-88e0-605bbad75917",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Đăng ký tự gán quyền STAFF: 400",
+      "url": "http://localhost:3001/auth/register",
+      "method": "POST",
+      "sortNum": 280000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"fullName\": \"Kẻ gian\",\n  \"email\": \"{{#email}}\",\n  \"password\": \"Brewlite123\",\n  \"confirmPassword\": \"Brewlite123\",\n  \"role\": \"STAFF\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "6050796c-e8aa-5f62-b5db-61f90baf7fc9",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Tự gửi giá món (bị từ chối, giá do backend tính): 400",
+      "url": "http://localhost:3001/orders",
+      "method": "POST",
+      "sortNum": 290000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"bac-xiu\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"note\": \"Ít đá\",\n      \"qty\": 1,\n      \"unitPrice\": 1\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"pickupTime\": \"Lấy ngay\",\n  \"paymentMethod\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "14253c4e-52ab-58e4-b081-10e0e12f11a7",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Số lượng âm: 400",
+      "url": "http://localhost:3001/orders",
+      "method": "POST",
+      "sortNum": 300000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"bac-xiu\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"note\": \"Ít đá\",\n      \"qty\": -5\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"pickupTime\": \"Lấy ngay\",\n  \"paymentMethod\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "0fac8d77-634e-5fc7-a832-3be0a8f84f79",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Thanh toán thiếu Idempotency-Key: 400",
+      "url": "http://localhost:3001/payments",
+      "method": "POST",
+      "sortNum": 310000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"method\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "5681e685-056a-53ef-b4f4-7c86f617cef8",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Kết quả VNPay bị sửa tham số (chữ ký sai): 400",
+      "url": "http://localhost:3001/payments/vnpay/return?vnp_TxnRef=BL000001_123456&vnp_Amount=100&vnp_ResponseCode=00&vnp_SecureHash=sai",
+      "method": "GET",
+      "sortNum": 320000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "2114eaaa-dce8-5071-9732-98f4d4c26ded",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "3de89dd3-fddc-5f87-9012-ff2bb738a1c5",
+      "name": "Đăng nhập sai mật khẩu: 401 (bấm 11 lần trong 1 phút sẽ thành 429)",
+      "url": "http://localhost:3001/auth/login",
+      "method": "POST",
+      "sortNum": 330000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"demo@brewlite.vn\",\n  \"password\": \"sai-mat-khau\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "66cb2658-3138-5ac7-88ff-9b33684486a2",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "Lưu món yêu thích: Bạc xỉu",
+      "url": "http://localhost:3001/favorites/bac-xiu",
+      "method": "PUT",
+      "sortNum": 340000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "6c2642f4-3344-5744-91bf-74937cc11013",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "Lưu lại lần nữa vẫn chỉ một món",
+      "url": "http://localhost:3001/favorites/bac-xiu",
+      "method": "PUT",
+      "sortNum": 350000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "a1a4ae88-77bc-5348-a9f9-9ebd1347b7e8",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "Danh sách món yêu thích của tôi",
+      "url": "http://localhost:3001/favorites/me",
+      "method": "GET",
+      "sortNum": 360000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "bcdf8f0c-30eb-5479-a877-2deeb749bf22",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "Lưu món không có: 404",
+      "url": "http://localhost:3001/favorites/khong-co-mon-nay",
+      "method": "PUT",
+      "sortNum": 370000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "404"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "a0be58ed-c0e5-5ce8-b5ed-838b4ad26456",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "Bỏ món yêu thích",
+      "url": "http://localhost:3001/favorites/bac-xiu",
+      "method": "DELETE",
+      "sortNum": 380000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "b2a1dec7-a560-5ccb-81e6-20b2cdaea8a4",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "b5cf757f-bdfe-54b2-aa40-4aaf6c408cd7",
+      "name": "Chưa đăng nhập xem món yêu thích: 401",
+      "url": "http://localhost:3001/favorites/me",
+      "method": "GET",
+      "sortNum": 390000,
+      "created": "2026-11-03T12:00:00.000Z",
+      "modified": "2026-11-03T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ]
+    },
+    {
+      "_id": "c4fe9f98-ec2d-5634-acda-146b6dbc3999",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Đăng nhập quản lý (lưu managerToken)",
+      "url": "http://localhost:3001/auth/login",
+      "method": "POST",
+      "sortNum": 410000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "set-env-var",
+          "custom": "json.accessToken",
+          "action": "setto",
+          "value": "{{managerToken}}"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"manager@brewlite.vn\",\n  \"password\": \"Brewlite123\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "c67e2e77-7b36-56ee-a35b-fdbdf23e2345",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Tổng quan hôm nay: doanh thu, số đơn, món bán chạy",
+      "url": "http://localhost:3001/staff/overview?range=today",
+      "method": "GET",
+      "sortNum": 420000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "3d6d7b24-8d01-533c-a3a3-6a893162a8f5",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Kỳ xem không hợp lệ (1 năm): 400",
+      "url": "http://localhost:3001/staff/overview?range=1y",
+      "method": "GET",
+      "sortNum": 430000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "33e8a613-6cc7-5760-ab0a-74d976c93ecc",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Nhân viên quầy xem tổng quan: 403",
+      "url": "http://localhost:3001/staff/overview?range=today",
+      "method": "GET",
+      "sortNum": 440000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "ef6e53fe-e15c-561f-a6b5-a053934a4d43",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Khách xem tổng quan: 403",
+      "url": "http://localhost:3001/staff/overview?range=today",
+      "method": "GET",
+      "sortNum": 450000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "1a9734b6-1bc1-5bb5-a580-f89c14fa27eb",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Quản lý tự pha chế (chuyển bước đơn): 403, chỉ nhân viên quầy làm",
+      "url": "http://localhost:3001/staff/orders/{{orderId}}/advance",
+      "method": "POST",
+      "sortNum": 460000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "fa63892d-de5c-5825-a634-b7a8689d65c2",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "5e066e70-5472-56e3-a611-4aa288f9f2f2",
+      "name": "Quản lý đặt món: 403, chỉ tài khoản khách đặt được",
+      "url": "http://localhost:3001/orders",
+      "method": "POST",
+      "sortNum": 470000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"bac-xiu\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"qty\": 1\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"pickupTime\": \"Lấy ngay\",\n  \"paymentMethod\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "9fb715af-d5a1-5f7c-aaba-61f56f9dc52e",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Danh sách món (bản quản lý, có cả món ẩn)",
+      "url": "http://localhost:3001/staff/products",
+      "method": "GET",
+      "sortNum": 480000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "df70d97b-ef33-5f36-a44e-78d842ba76ba",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Ẩn món Bạc xỉu",
+      "url": "http://localhost:3001/staff/products/bac-xiu",
+      "method": "PATCH",
+      "sortNum": 490000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"hidden\": true\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "32b49ac6-23cb-5154-acb6-2a9f5067b750",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Khách mở món đã ẩn: 404",
+      "url": "http://localhost:3001/products/bac-xiu",
+      "method": "GET",
+      "sortNum": 500000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "404"
+        }
+      ]
+    },
+    {
+      "_id": "6c635730-78ca-5976-a365-4d5bcb0c6130",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Khách đặt món đã ẩn: 400 (món không còn bán)",
+      "url": "http://localhost:3001/orders",
+      "method": "POST",
+      "sortNum": 510000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"bac-xiu\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"qty\": 1\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"pickupTime\": \"Lấy ngay\",\n  \"paymentMethod\": \"POINTS\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      }
+    },
+    {
+      "_id": "383acb15-ae0b-588d-a3cd-3c371dc5c86e",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Bỏ ẩn Bạc xỉu (trả lại như cũ)",
+      "url": "http://localhost:3001/staff/products/bac-xiu",
+      "method": "PATCH",
+      "sortNum": 520000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"hidden\": false\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "ad8f8c6e-fd9f-530c-a000-bc0b591a8fe6",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Khách mở lại món: 200",
+      "url": "http://localhost:3001/products/bac-xiu",
+      "method": "GET",
+      "sortNum": 530000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "_id": "d5ab00a3-227e-5a2b-aa0a-675fd4050fa1",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Đặt giá âm: 400",
+      "url": "http://localhost:3001/staff/products/bac-xiu",
+      "method": "PATCH",
+      "sortNum": 540000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "400"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"price\": -1000\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "a78c0721-0dc1-59a7-a172-db7c75d3cd62",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Nhân viên quầy sửa món: 403",
+      "url": "http://localhost:3001/staff/products/bac-xiu",
+      "method": "PATCH",
+      "sortNum": 550000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "403"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"hidden\": true\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{staffToken}}"
+      }
+    },
+    {
+      "_id": "d56d5402-caf3-5a72-a834-92d443e03c0d",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Tạo mã giảm giá THUNDER10 (10%)",
+      "url": "http://localhost:3001/staff/vouchers",
+      "method": "POST",
+      "sortNum": 560000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "201"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"code\": \"THUNDER10\",\n  \"type\": \"PERCENT\",\n  \"title\": \"Mã thử Thunder Client\",\n  \"terms\": \"\",\n  \"percent\": 10,\n  \"maxDiscount\": 20000,\n  \"minOrder\": 0,\n  \"requiredMethod\": null,\n  \"requiresDelivery\": false,\n  \"usageLimit\": null,\n  \"active\": true,\n  \"showOnSite\": false,\n  \"startsAt\": \"\",\n  \"endsAt\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "b5e768b5-4466-5ec9-a0ba-8b0edffda9ae",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Tạo trùng mã THUNDER10: 409",
+      "url": "http://localhost:3001/staff/vouchers",
+      "method": "POST",
+      "sortNum": 570000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "409"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"code\": \"THUNDER10\",\n  \"type\": \"PERCENT\",\n  \"title\": \"Mã thử Thunder Client\",\n  \"terms\": \"\",\n  \"percent\": 10,\n  \"maxDiscount\": 20000,\n  \"minOrder\": 0,\n  \"requiredMethod\": null,\n  \"requiresDelivery\": false,\n  \"usageLimit\": null,\n  \"active\": true,\n  \"showOnSite\": false,\n  \"startsAt\": \"\",\n  \"endsAt\": \"\"\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "590a7eac-beba-5f69-a629-8cc3a9f0b261",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Khách báo giá với mã mới: được giảm",
+      "url": "http://localhost:3001/orders/quote",
+      "method": "POST",
+      "sortNum": 580000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.voucher.ok",
+          "action": "equal",
+          "value": "true"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"latte\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"qty\": 2\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"voucherCode\": \"THUNDER10\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "97e6989d-6a2e-5f5f-ae8b-22c02bbc1fe5",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Tạm dừng mã THUNDER10",
+      "url": "http://localhost:3001/staff/vouchers/THUNDER10/active",
+      "method": "PATCH",
+      "sortNum": 590000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"active\": false\n}",
+        "form": []
+      },
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    },
+    {
+      "_id": "a8e984ba-85f1-5e9e-a1b3-3c65d2c9c138",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Khách báo giá với mã đã tạm dừng: không giảm, có lý do",
+      "url": "http://localhost:3001/orders/quote",
+      "method": "POST",
+      "sortNum": 600000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.voucher.ok",
+          "action": "equal",
+          "value": "false"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"latte\",\n      \"size\": \"M\",\n      \"sugar\": 50,\n      \"ice\": 50,\n      \"toppingIds\": [],\n      \"qty\": 2\n    }\n  ],\n  \"fulfillment\": \"PICKUP\",\n  \"voucherCode\": \"THUNDER10\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "cba6a3fc-f48a-572c-aeb5-3931131ef986",
+      "colId": "7aca99f7-a0f4-5f46-ad12-c95a3b8933db",
+      "containerId": "ac053b59-cc42-55cd-a8c0-5579e954e2d5",
+      "name": "Xoá mã THUNDER10 (dọn dữ liệu thử)",
+      "url": "http://localhost:3001/staff/vouchers/THUNDER10",
+      "method": "DELETE",
+      "sortNum": 610000,
+      "created": "2026-11-07T12:00:00.000Z",
+      "modified": "2026-11-07T12:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{managerToken}}"
+      }
+    }
+  ]
+}

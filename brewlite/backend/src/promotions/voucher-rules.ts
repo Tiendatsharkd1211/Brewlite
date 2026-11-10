@@ -14,12 +14,17 @@ export interface VoucherLike {
   usageLimit: number | null;
   usedCount: number;
   active: boolean;
+  /** Thời gian hiệu lực; null là không giới hạn */
+  startsAt?: Date | null;
+  endsAt?: Date | null;
 }
 
 export interface VoucherContext {
   subtotal: number;
   fulfillment: 'PICKUP' | 'DELIVERY';
   method: string;
+  /** Thời điểm áp mã (mặc định: bây giờ), truyền vào để test được */
+  now?: Date;
 }
 
 export type VoucherOutcome = { ok: true; discount: number; freeShip: boolean } | { ok: false; reason: string };
@@ -28,6 +33,9 @@ const METHOD_NAMES: Record<string, string> = { VNPAY: 'VNPay', POINTS: 'điểm'
 
 export function evaluateVoucher(v: VoucherLike | null, ctx: VoucherContext): VoucherOutcome {
   if (!v || !v.active) return { ok: false, reason: 'Mã giảm giá không tồn tại hoặc đã hết hạn' };
+  const now = ctx.now ?? new Date();
+  if (v.startsAt && now < v.startsAt) return { ok: false, reason: `Mã ${v.code} chưa tới ngày áp dụng` };
+  if (v.endsAt && now > v.endsAt) return { ok: false, reason: `Mã ${v.code} đã hết hạn` };
   if (v.usageLimit !== null && v.usedCount >= v.usageLimit) return { ok: false, reason: `Mã ${v.code} đã hết lượt sử dụng` };
   if (ctx.subtotal < v.minOrder) return { ok: false, reason: `Mã ${v.code} áp dụng cho đơn từ ${v.minOrder.toLocaleString('vi-VN')}đ` };
   if (v.requiredMethod && v.requiredMethod !== ctx.method) {
